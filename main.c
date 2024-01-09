@@ -11,23 +11,20 @@
 #include <string.h>
 #include "esp_log.h"
 
-//Driver libraries
+// Driver libraries
 #include "driver/i2c.h"
 #include "driver/ledc.h"
 #include "driver/gpio.h"
 #include "driver/adc.h"
 
-//andet
-#include "freertos/queue.h"
-
-//Display libraies
+// Display libraies
 #include "ssd1306.h"
 #include "font8x8_basic.h"
 
-//Temperature/humidity sensor library
+// Temperature/humidity sensor library
 #include <am2320.h>
 
-//Stemma soil sensor library
+// Stemma soil sensor library
 #include "Adafruit_Stemma_soil_sensor.h"
 
 #define tag "EXAMPLE_ALL"
@@ -36,86 +33,72 @@
 #define BUTTON_1_GPIO_PIN 18
 #define BUTTON_2_GPIO_PIN 19
 
-#define I2C_MASTER_FREQ_HZ 75000 //Reduce it to 50000 if the temperature/umidity sensor fails
+#define I2C_MASTER_FREQ_HZ 75000 // Reduce it to 50000 if the temperature/umidity sensor fails
 #define I2C_MASTER_TX_BUF_DISABLE 0
 #define I2C_MASTER_RX_BUF_DISABLE 0
 #define I2C_MASTER_SDA_GPIO 2
 #define I2C_MASTER_SCL_GPIO 3
 #define I2C_NUM 0
 
-//PWM library to control LED intensity and/or play tone on buzzer
-#define LEDC_TIMER              LEDC_TIMER_0
-#define LEDC_MODE               LEDC_LOW_SPEED_MODE
-#define LEDC_OUTPUT_IO_RED      (4) // Define the output GPIO for red
-#define LEDC_OUTPUT_IO_GREEN    (5) // Define the output GPIO for green
-#define LEDC_OUTPUT_IO_BLUE     (6) // Define the output GPIO for blue
-#define LEDC_CHANNEL_RED        LEDC_CHANNEL_0
-#define LEDC_CHANNEL_GREEN      LEDC_CHANNEL_1
-#define LEDC_CHANNEL_BLUE       LEDC_CHANNEL_2
-#define LEDC_DUTY_RES           LEDC_TIMER_13_BIT // Set duty resolution to 13 bits
-#define LEDC_DUTY               (4096) // Set duty to 50%. (2 ** 13) * 50% = 4096
-#define LEDC_FREQUENCY          (1000) // Frequency in Hertz. Set frequency at 1 kHz
+// PWM library to control LED intensity and/or play tone on buzzer
+#define LEDC_TIMER LEDC_TIMER_0
+#define LEDC_MODE LEDC_LOW_SPEED_MODE
+#define LEDC_OUTPUT_IO_RED (4)   // Define the output GPIO for red
+#define LEDC_OUTPUT_IO_GREEN (5) // Define the output GPIO for green
+#define LEDC_OUTPUT_IO_BLUE (6)  // Define the output GPIO for blue
+#define LEDC_CHANNEL_RED LEDC_CHANNEL_0
+#define LEDC_CHANNEL_GREEN LEDC_CHANNEL_1
+#define LEDC_CHANNEL_BLUE LEDC_CHANNEL_2
+#define LEDC_DUTY_RES LEDC_TIMER_13_BIT // Set duty resolution to 13 bits
+#define LEDC_DUTY (4096)                // Set duty to 50%. (2 ** 13) * 50% = 4096
+#define LEDC_FREQUENCY (1000)           // Frequency in Hertz. Set frequency at 1 kHz
 
-#define BUZZ_TIMER              LEDC_TIMER_1
-#define BUZZ_MODE               LEDC_LOW_SPEED_MODE
-#define BUZZ_OUTPUT_IO          (9) // Define the output GPIO for red
-#define BUZZ_CHANNEL            LEDC_CHANNEL_4
-#define BUZZ_DUTY_RES           LEDC_TIMER_13_BIT // Set duty resolution to 13 bits
-#define BUZZ_DUTY               (4096) // Set duty to 50%. (2 ** 13) * 50% = 4096
-#define BUZZ_FREQUENCY          (1000) // Frequency in Hertz. Set frequency at 1 kHz
+#define BUZZ_TIMER LEDC_TIMER_1
+#define BUZZ_MODE LEDC_LOW_SPEED_MODE
+#define BUZZ_OUTPUT_IO (9) // Define the output GPIO for red
+#define BUZZ_CHANNEL LEDC_CHANNEL_4
+#define BUZZ_DUTY_RES LEDC_TIMER_13_BIT // Set duty resolution to 13 bits
+#define BUZZ_DUTY (4096)                // Set duty to 50%. (2 ** 13) * 50% = 4096
+#define BUZZ_FREQUENCY (1000)           // Frequency in Hertz. Set frequency at 1 kHz
 
-int state = 0;
-QueueHandle_t interputQueue;
-
-void loopDeLoop(){
-    
-}
-
-static void IRAM_ATTR gpio_interrupt_handler(void *args)
+void print_info()
 {
-    int pinNumber = (int)args;
-    xQueueSendFromISR(interputQueue, &pinNumber, NULL);
-}
+    /* Print chip information */
+    esp_chip_info_t chip_info;
+    uint32_t flash_size;
+    esp_chip_info(&chip_info);
+    printf("This is %s chip with %d CPU core(s), WiFi%s%s, ",
+           CONFIG_IDF_TARGET,
+           chip_info.cores,
+           (chip_info.features & CHIP_FEATURE_BT) ? "/BT" : "",
+           (chip_info.features & CHIP_FEATURE_BLE) ? "/BLE" : "");
 
-void LED_Control_Task(void *params)
-{
-    int state = 0;
-    int pinNumber, count = 0;
-    while (true)
+    unsigned major_rev = chip_info.revision / 100;
+    unsigned minor_rev = chip_info.revision % 100;
+    printf("silicon revision v%d.%d, ", major_rev, minor_rev);
+    if (esp_flash_get_size(NULL, &flash_size) != ESP_OK)
     {
-        if (xQueueReceive(interputQueue, &pinNumber, portMAX_DELAY))
-        {
-            count++;
-            if (count % 2 == 0)
-            {
-                if (state == 0)
-                {
-                    state = 1;
-                    gpio_set_level(RED_LED_GPIO, state);
-                }
-                else
-                {
-                    state = 0;
-                    gpio_set_level(RED_LED_GPIO, state);
-                }
-                printf("GPIO %d was pressed %d times. The state is %d\n", pinNumber, count / 2, state);
-            }
-        }
+        printf("Get flash size failed");
+        return;
     }
+
+    printf("%uMB %s flash\n", flash_size / (1024 * 1024),
+           (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
+
+    printf("Minimum free heap size: %d bytes\n", esp_get_minimum_free_heap_size());
 }
 
-
-
-void display_demo(){
+void display_demo()
+{
     SSD1306_t dev;
     int center, top; //, bottom;
-    //char lineChar[20];
+    // char lineChar[20];
 
-    //Initialize the display (shared i2c) only once after boot.
+    // Initialize the display (shared i2c) only once after boot.
     i2c_master_shared_i2c_init(&dev);
 
-    //Uncomment this if you want to flip the display
-    //dev._flip = true;
+    // Uncomment this if you want to flip the display
+    // dev._flip = true;
 
     ssd1306_init(&dev, 128, 64);
 
@@ -123,47 +106,48 @@ void display_demo(){
     ssd1306_clear_screen(&dev, false);
     ssd1306_contrast(&dev, 0xff);
     ssd1306_display_text_x3(&dev, 0, "Hello", 5, false);
-    
-    //delay 2 seconds
+
+    // delay 2 seconds
     vTaskDelay(2000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(tag, "Writing some text line by line (notice the 2 different colours)");
     top = 2;
     center = 3;
-    //bottom = 8;
+    // bottom = 8;
     ssd1306_display_text(&dev, 0, "SSD1306 128x64", 14, false);
     ssd1306_display_text(&dev, 1, "ABCDEFGHIJKLMNOP", 16, false);
-    ssd1306_display_text(&dev, 2, "abcdefghijklmnop",16, false);
+    ssd1306_display_text(&dev, 2, "abcdefghijklmnop", 16, false);
     ssd1306_display_text(&dev, 3, "Hello World!!", 13, false);
-    //You can clear lines as follows (uncomment to see the effect)
-    //ssd1306_clear_line(&dev, 4, true);
-    //ssd1306_clear_line(&dev, 5, true);
-    //ssd1306_clear_line(&dev, 6, true);
-    //ssd1306_clear_line(&dev, 7, true);
+    // You can clear lines as follows (uncomment to see the effect)
+    // ssd1306_clear_line(&dev, 4, true);
+    // ssd1306_clear_line(&dev, 5, true);
+    // ssd1306_clear_line(&dev, 6, true);
+    // ssd1306_clear_line(&dev, 7, true);
     ssd1306_display_text(&dev, 4, "SSD1306 128x64", 14, true);
     ssd1306_display_text(&dev, 5, "ABCDEFGHIJKLMNOP", 16, true);
-    ssd1306_display_text(&dev, 6, "abcdefghijklmnop",16, true);
+    ssd1306_display_text(&dev, 6, "abcdefghijklmnop", 16, true);
     ssd1306_display_text(&dev, 7, "Hello World!!", 13, true);
 
-    //delay 2 seconds
+    // delay 2 seconds
     vTaskDelay(2000 / portTICK_PERIOD_MS);
-        
+
     // Display Count Down
     ESP_LOGI(tag, "Displaying a count down on top of a black square.");
     uint8_t image[24];
     memset(image, 0, sizeof(image));
-    ssd1306_display_image(&dev, top, (6*8-1), image, sizeof(image));
-    ssd1306_display_image(&dev, top+1, (6*8-1), image, sizeof(image));
-    ssd1306_display_image(&dev, top+2, (6*8-1), image, sizeof(image));
-    for(int font=0x35; font>0x30; font--) {
+    ssd1306_display_image(&dev, top, (6 * 8 - 1), image, sizeof(image));
+    ssd1306_display_image(&dev, top + 1, (6 * 8 - 1), image, sizeof(image));
+    ssd1306_display_image(&dev, top + 2, (6 * 8 - 1), image, sizeof(image));
+    for (int font = 0x35; font > 0x30; font--)
+    {
         memset(image, 0, sizeof(image));
-        ssd1306_display_image(&dev, top+1, (7*8-1), image, 8);
+        ssd1306_display_image(&dev, top + 1, (7 * 8 - 1), image, 8);
         memcpy(image, font8x8_basic_tr[font], 8);
-        if (dev._flip) ssd1306_flip(image, 8);
-        ssd1306_display_image(&dev, top+1, (7*8-1), image, 8);
+        if (dev._flip)
+            ssd1306_flip(image, 8);
+        ssd1306_display_image(&dev, top + 1, (7 * 8 - 1), image, 8);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
-
 
     // Horizontal Scroll
     ESP_LOGI(tag, "Horizontal scrolling.");
@@ -175,7 +159,7 @@ void display_demo(){
     ssd1306_hardware_scroll(&dev, SCROLL_LEFT);
     vTaskDelay(3000 / portTICK_PERIOD_MS);
     ssd1306_hardware_scroll(&dev, SCROLL_STOP);
-    
+
     // Vertical Scroll
     ESP_LOGI(tag, "Vertical scrolling.");
     ssd1306_clear_screen(&dev, false);
@@ -186,21 +170,22 @@ void display_demo(){
     ssd1306_hardware_scroll(&dev, SCROLL_UP);
     vTaskDelay(3000 / portTICK_PERIOD_MS);
     ssd1306_hardware_scroll(&dev, SCROLL_STOP);
-    
+
     // Invert
     ESP_LOGI(tag, "Invert colours.");
     ssd1306_clear_screen(&dev, true);
     ssd1306_contrast(&dev, 0xff);
     ssd1306_display_text(&dev, center, "  Good Bye!!", 12, true);
-    
-    //delay 2 seconds
+
+    // delay 2 seconds
     vTaskDelay(2000 / portTICK_PERIOD_MS);
 }
 
-void temperaure_humidity_demo(){
+void temperaure_humidity_demo()
+{
     i2c_dev_t dev = {0};
 
-    //Initialize the sensor (shared i2c) only once after boot.
+    // Initialize the sensor (shared i2c) only once after boot.
     ESP_ERROR_CHECK(am2320_shared_i2c_init(&dev, I2C_NUM));
 
     float temperature, humidity;
@@ -213,17 +198,18 @@ void temperaure_humidity_demo(){
         else
             ESP_LOGE(tag, "Error reading data: %d (%s)", res, esp_err_to_name(res));
 
-        //500 ms delay
+        // 500 ms delay
         vTaskDelay((500) / portTICK_PERIOD_MS);
     }
 }
 
-void stemma_soil_demo(){
+void stemma_soil_demo()
+{
     int ret = ESP_OK;
     uint16_t moisture_value = 0;
     float temperature_value = 0;
 
-    //Initialize the sensor (shared i2c) only once after boot.
+    // Initialize the sensor (shared i2c) only once after boot.
     ESP_ERROR_CHECK(adafruit_stemma_soil_sensor_shared_i2c_init());
 
     for (int i = 0; i < 10; i++)
@@ -241,149 +227,145 @@ void stemma_soil_demo(){
         {
             ESP_LOGI(tag, "Adafruit Stemma sensor value: =%f", temperature_value);
         }
-        
-        //500 ms delay
+
+        // 500 ms delay
         vTaskDelay((500) / portTICK_PERIOD_MS);
     }
 }
 
-void led_fade_demo(){
+void led_fade_demo()
+{
     // Prepare and then apply the LEDC PWM timer configuration (one time can drive multiple channels)
     ledc_timer_config_t ledc_timer = {
-        .speed_mode       = LEDC_MODE,
-        .duty_resolution  = LEDC_DUTY_RES,
-        .timer_num        = LEDC_TIMER,
-        .freq_hz          = LEDC_FREQUENCY,  // Set output frequency at 1 kHz
-        .clk_cfg          = LEDC_AUTO_CLK
-    };
+        .speed_mode = LEDC_MODE,
+        .duty_resolution = LEDC_DUTY_RES,
+        .timer_num = LEDC_TIMER,
+        .freq_hz = LEDC_FREQUENCY, // Set output frequency at 1 kHz
+        .clk_cfg = LEDC_AUTO_CLK};
     ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
 
     // Prepare and then apply the LEDC PWM channel configuration
     ledc_channel_config_t ledc_channel_red = {
-        .speed_mode     = LEDC_MODE,
-        .channel        = LEDC_CHANNEL_RED,
-        .timer_sel      = LEDC_TIMER,
-        .intr_type      = LEDC_INTR_DISABLE,
-        .gpio_num       = LEDC_OUTPUT_IO_RED,
-        .duty           = 0, // Set duty to 0%
-        .hpoint         = 0
-    };
+        .speed_mode = LEDC_MODE,
+        .channel = LEDC_CHANNEL_RED,
+        .timer_sel = LEDC_TIMER,
+        .intr_type = LEDC_INTR_DISABLE,
+        .gpio_num = LEDC_OUTPUT_IO_RED,
+        .duty = 0, // Set duty to 0%
+        .hpoint = 0};
     ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel_red));
 
     ledc_channel_config_t ledc_channel_green = {
-        .speed_mode     = LEDC_MODE,
-        .channel        = LEDC_CHANNEL_GREEN,
-        .timer_sel      = LEDC_TIMER,
-        .intr_type      = LEDC_INTR_DISABLE,
-        .gpio_num       = LEDC_OUTPUT_IO_GREEN,
-        .duty           = 0, // Set duty to 0%
-        .hpoint         = 0
-    };
+        .speed_mode = LEDC_MODE,
+        .channel = LEDC_CHANNEL_GREEN,
+        .timer_sel = LEDC_TIMER,
+        .intr_type = LEDC_INTR_DISABLE,
+        .gpio_num = LEDC_OUTPUT_IO_GREEN,
+        .duty = 0, // Set duty to 0%
+        .hpoint = 0};
     ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel_green));
 
     ledc_channel_config_t ledc_channel_blue = {
-        .speed_mode     = LEDC_MODE,
-        .channel        = LEDC_CHANNEL_BLUE,
-        .timer_sel      = LEDC_TIMER,
-        .intr_type      = LEDC_INTR_DISABLE,
-        .gpio_num       = LEDC_OUTPUT_IO_BLUE,
-        .duty           = 0, // Set duty to 0%
-        .hpoint         = 0
-    };
+        .speed_mode = LEDC_MODE,
+        .channel = LEDC_CHANNEL_BLUE,
+        .timer_sel = LEDC_TIMER,
+        .intr_type = LEDC_INTR_DISABLE,
+        .gpio_num = LEDC_OUTPUT_IO_BLUE,
+        .duty = 0, // Set duty to 0%
+        .hpoint = 0};
     ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel_blue));
 
     // Now the initialization is done
     ESP_LOGI(tag, "Initialization complete. Now fading the 3 colours.");
 
     // Ramp down duty cycle
-    for (int duty = 8192-1; duty >= 8192-1-2048; duty = duty - 2)
+    for (int duty = 8192 - 1; duty >= 8192 - 1 - 2048; duty = duty - 2)
     {
         // Set duty
         ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL_RED, duty));
-        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL_GREEN, (8192-1) + (8192-1-2048) - duty));
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL_GREEN, (8192 - 1) + (8192 - 1 - 2048) - duty));
         ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL_BLUE, duty));
         // Update duty to apply the new value
         ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL_RED));
         ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL_GREEN));
         ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL_BLUE));
-        //1000 ms delay
+        // 1000 ms delay
         vTaskDelay((10) / portTICK_PERIOD_MS);
-        //printf("%d\n", duty);
+        // printf("%d\n", duty);
     }
 
-    // Ramp up duty cycle 
-    for (int duty = 8192-1-2048; duty < 8192-1; duty = duty + 2)
+    // Ramp up duty cycle
+    for (int duty = 8192 - 1 - 2048; duty < 8192 - 1; duty = duty + 2)
     {
         // Set duty
         // Set duty
         ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL_RED, duty));
-        //ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL_GREEN, (8192-1) + (8192-1-2048) - duty)); //Leaving green off
-        //ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL_BLUE, duty)); //Leaving blue on
-        // Update duty to apply the new value
+        // ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL_GREEN, (8192-1) + (8192-1-2048) - duty)); //Leaving green off
+        // ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL_BLUE, duty)); //Leaving blue on
+        //  Update duty to apply the new value
         ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL_RED));
-        //ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL_GREEN)); //Leaving green off
-        //ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL_BLUE)); //Leaving blue on
-        //1000 ms delay
+        // ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL_GREEN)); //Leaving green off
+        // ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL_BLUE)); //Leaving blue on
+        // 1000 ms delay
         vTaskDelay((10) / portTICK_PERIOD_MS);
-        //printf("%d\n", duty);
+        // printf("%d\n", duty);
     }
 }
 
-void buzzer_demo(){
+void buzzer_demo()
+{
     // Prepare and then apply the LEDC PWM timer configuration (we use it for the buzzer)
     ledc_timer_config_t ledc_timer_buzz = {
-        .speed_mode       = BUZZ_MODE,
-        .duty_resolution  = BUZZ_DUTY_RES,
-        .timer_num        = BUZZ_TIMER,
-        .freq_hz          = BUZZ_FREQUENCY,  // Set output frequency at 1 kHz
-        .clk_cfg          = LEDC_AUTO_CLK
-    };
+        .speed_mode = BUZZ_MODE,
+        .duty_resolution = BUZZ_DUTY_RES,
+        .timer_num = BUZZ_TIMER,
+        .freq_hz = BUZZ_FREQUENCY, // Set output frequency at 1 kHz
+        .clk_cfg = LEDC_AUTO_CLK};
     ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer_buzz));
 
     // Prepare and then apply the LEDC PWM channel configuration
     ledc_channel_config_t ledc_channel_buzz = {
-        .speed_mode     = BUZZ_MODE,
-        .channel        = BUZZ_CHANNEL,
-        .timer_sel      = BUZZ_TIMER,
-        .intr_type      = LEDC_INTR_DISABLE,
-        .gpio_num       = BUZZ_OUTPUT_IO,
-        .duty           = 0, // Set duty to 0%
-        .hpoint         = 0
-    };
+        .speed_mode = BUZZ_MODE,
+        .channel = BUZZ_CHANNEL,
+        .timer_sel = BUZZ_TIMER,
+        .intr_type = LEDC_INTR_DISABLE,
+        .gpio_num = BUZZ_OUTPUT_IO,
+        .duty = 0, // Set duty to 0%
+        .hpoint = 0};
     ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel_buzz));
 
     // Now the initialization is done
     ESP_LOGI(tag, "Initialization complete. Playing 3 tones.");
 
     // Set duty
-    ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 4096)); //50% duty //Can change 4096 to different sound qualities like "3*4096/4" which gives 75% 
+    ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 4096)); // 50% duty //Can change 4096 to different sound qualities like "3*4096/4" which gives 75%
     // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(BUZZ_MODE, BUZZ_CHANNEL));
-    //1000 ms delay
+    // 1000 ms delay
     ESP_LOGI(tag, "Playing 1000 Hz.");
     vTaskDelay((600) / portTICK_PERIOD_MS);
 
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 23.12)); //50% duty f#
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 23.12)); // 50% duty f#
     ESP_LOGI(tag, "Playing 23.12 Hz.");
     vTaskDelay((600) / portTICK_PERIOD_MS);
     // 9 minor - //F#0 G1 Ab2 A3 Bb4 B5 - //23.12, 49, 103.83, 220, 466.16, 987.77
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 49)); //50% duty G1
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 49)); // 50% duty G1
     ESP_LOGI(tag, "Playing 24.50 Hz.");
     vTaskDelay((600) / portTICK_PERIOD_MS);
 
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 103.83)); //50% duty Ab2
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 103.83)); // 50% duty Ab2
     ESP_LOGI(tag, "Playing 51.91 Hz.");
     vTaskDelay((600) / portTICK_PERIOD_MS);
 
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 220)); //50% duty A3
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 220)); // 50% duty A3
     ESP_LOGI(tag, "Playing 27.50 Hz.");
     vTaskDelay((600) / portTICK_PERIOD_MS);
-    
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 466.16)); //50% duty Bb4
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 466.16)); // 50% duty Bb4
     ESP_LOGI(tag, "Playing 29.14 Hz.");
     vTaskDelay((600) / portTICK_PERIOD_MS);
-    
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 987.77)); //50% duty B5
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 987.77)); // 50% duty B5
     ESP_LOGI(tag, "Playing 30.87 Hz.");
     vTaskDelay((600) / portTICK_PERIOD_MS);
 
@@ -394,21 +376,19 @@ void buzzer_demo(){
     ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 587)); // 50% duty D5
     ESP_LOGI(tag, "Playing D5 tone at 587 Hz.");
     vTaskDelay((600) / portTICK_PERIOD_MS);
-    
+
     ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 659)); // 50% duty E5
     ESP_LOGI(tag, "Playing E5 tone at 659 Hz.");
     vTaskDelay((600) / portTICK_PERIOD_MS);
     // Set duty
-    ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 0)); //0% duty
+    ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 0)); // 0% duty
     // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(BUZZ_MODE, BUZZ_CHANNEL));
     ESP_LOGI(tag, "Buzzer off.");
-
-
 }
 
-
-void gpio_demo(){
+void gpio_demo()
+{
     gpio_config_t io_conf;
 
     // Configure RED LED GPIO
@@ -417,13 +397,13 @@ void gpio_demo(){
     io_conf.intr_type = GPIO_INTR_DISABLE;
     gpio_config(&io_conf);
 
-    io_conf.pin_bit_mask = (1ULL<<BUTTON_1_GPIO_PIN);
+    io_conf.pin_bit_mask = (1ULL << BUTTON_1_GPIO_PIN);
     io_conf.mode = GPIO_MODE_INPUT;
     io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
     io_conf.intr_type = GPIO_INTR_DISABLE;
     gpio_config(&io_conf);
 
-    io_conf.pin_bit_mask = (1ULL<<BUTTON_2_GPIO_PIN);
+    io_conf.pin_bit_mask = (1ULL << BUTTON_2_GPIO_PIN);
     io_conf.mode = GPIO_MODE_INPUT;
     io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
     io_conf.intr_type = GPIO_INTR_DISABLE;
@@ -445,12 +425,14 @@ void gpio_demo(){
     int button_1_now;
     int button_2_status = gpio_get_level(BUTTON_2_GPIO_PIN);
     int button_2_now;
-    for (int i = 0; i < 10000/50; i++)
+    for (int i = 0; i < 10000 / 50; i++)
     {
         button_1_now = gpio_get_level(BUTTON_1_GPIO_PIN);
         button_2_now = gpio_get_level(BUTTON_2_GPIO_PIN);
-        if(button_1_status != button_1_now){
-            if(button_1_now == 0){
+        if (button_1_status != button_1_now)
+        {
+            if (button_1_now == 0)
+            {
                 ESP_LOGI(tag, "BUTTON 1 PRESSED (reading 0).");
             }
             else
@@ -460,8 +442,10 @@ void gpio_demo(){
             button_1_status = button_1_now;
         }
 
-        if(button_2_status != button_2_now){
-            if(button_2_now == 0){
+        if (button_2_status != button_2_now)
+        {
+            if (button_2_now == 0)
+            {
                 ESP_LOGI(tag, "BUTTON 2 PRESSED (reading 0).");
             }
             else
@@ -470,22 +454,44 @@ void gpio_demo(){
             }
             button_2_status = button_2_now;
         }
-        
+
         vTaskDelay((50) / portTICK_PERIOD_MS);
     }
-    
 }
 
-void light_adc_demo(){
-    //Configuring the ADC
+void light_adc_demo()
+{
+    const char *intensity;
+    // Configuring the ADC
     adc1_config_width(ADC_WIDTH_BIT_12);
-    adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_DB_11); //ADC1_CHANNEL_0 is on GPIO0 (GPIOzero)
+    adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_DB_11); // ADC1_CHANNEL_0 is on GPIO0 (GPIOzero)
 
     for (int i = 0; i < 20; i++)
     {
         int val = adc1_get_raw(ADC1_CHANNEL_0);
-        ESP_LOGI(tag, "Light sensor ADC value: %d", val);
-        vTaskDelay(pdMS_TO_TICKS(500));  // Delay for 1 second
+        if (val < 10)
+        {
+            intensity = "Dark";
+        }
+        else if (val < 200)
+        {
+            intensity = "Dim";
+        }
+        else if (val < 500)
+        {
+            intensity = "Light";
+        }
+        else if (val < 800)
+        {
+            intensity = "Bright";
+        }
+        else
+        {
+            intensity = "Very bright";
+        }
+
+        ESP_LOGI(tag, "Light sensor ADC value: %d: %s", val, intensity);
+        vTaskDelay(pdMS_TO_TICKS(500)); // Delay for 1 second
     }
 }
 
@@ -493,9 +499,12 @@ void app_main(void)
 {
     printf("Hello! Starting now with the demos ;-)\n");
 
-    //Initialize common I2C port for display, soil sensor, and temperature/umidity sensor
-    //Initialized it as follows only once here in the main, then use the shared_init 
-    //functions for the different components as shown in this demo (see _demo functions).
+    printf("\nPrinting device information:\n");
+    print_info();
+
+    // Initialize common I2C port for display, soil sensor, and temperature/umidity sensor
+    // Initialized it as follows only once here in the main, then use the shared_init
+    // functions for the different components as shown in this demo (see _demo functions).
     i2c_config_t conf;
     conf.mode = I2C_MODE_MASTER;
     conf.sda_io_num = I2C_MASTER_SDA_GPIO;
@@ -507,25 +516,8 @@ void app_main(void)
     i2c_param_config(I2C_NUM, &conf);
     ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0));
 
-    interputQueue = xQueueCreate(1, sizeof(int));
-    if (interputQueue == NULL)
-    {
-        // Handle error: Queue creation failed
-        ESP_LOGE("Queue Create", "Failed to create queue");
-        return;
-    }
-
-    BaseType_t taskCreated = xTaskCreate(LED_Control_Task, "LED_Control_Task", 2048, NULL, 1, NULL);
-    if (taskCreated != pdPASS)
-    {
-        // Handle error: Task creation failed
-        ESP_LOGE("Task Create", "Failed to create task");
-        return;
-    }
-
-    gpio_install_isr_service(0);
-    gpio_isr_handler_add(RED_LED_GPIO, gpio_interrupt_handler, (void *)RED_LED_GPIO);
-
+    printf("\nRunning the GPIO demo:\n");
+    gpio_demo();
 
     printf("\nRunning the light ADC demo (20 reads - cover/uncover the sensor):\n");
     light_adc_demo();
@@ -549,6 +541,6 @@ void app_main(void)
     printf("Use the code in the demo in your own software. Goodbye!\n");
     fflush(stdout);
 
-    //This would automatically restart the ESP32
-    //esp_restart();
+    // This would automatically restart the ESP32
+    // esp_restart();
 }
