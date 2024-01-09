@@ -17,6 +17,9 @@
 #include "driver/gpio.h"
 #include "driver/adc.h"
 
+//andet
+#include "freertos/queue.h"
+
 //Display libraies
 #include "ssd1306.h"
 #include "font8x8_basic.h"
@@ -61,10 +64,45 @@
 #define BUZZ_DUTY               (4096) // Set duty to 50%. (2 ** 13) * 50% = 4096
 #define BUZZ_FREQUENCY          (1000) // Frequency in Hertz. Set frequency at 1 kHz
 
+int state = 0;
+QueueHandle_t interputQueue;
+
 void loopDeLoop(){
     
 }
 
+static void IRAM_ATTR gpio_interrupt_handler(void *args)
+{
+    int pinNumber = (int)args;
+    xQueueSendFromISR(interputQueue, &pinNumber, NULL);
+}
+
+void LED_Control_Task(void *params)
+{
+    int state = 0;
+    int pinNumber, count = 0;
+    while (true)
+    {
+        if (xQueueReceive(interputQueue, &pinNumber, portMAX_DELAY))
+        {
+            count++;
+            if (count % 2 == 0)
+            {
+                if (state == 0)
+                {
+                    state = 1;
+                    gpio_set_level(RED_LED_GPIO, state);
+                }
+                else
+                {
+                    state = 0;
+                    gpio_set_level(RED_LED_GPIO, state);
+                }
+                printf("GPIO %d was pressed %d times. The state is %d\n", pinNumber, count / 2, state);
+            }
+        }
+    }
+}
 
 
 
@@ -470,12 +508,8 @@ void app_main(void)
     }
 
     gpio_install_isr_service(0);
-    gpio_isr_handler_add(INPUT_PIN, gpio_interrupt_handler, (void *)INPUT_PIN);
-}
+    gpio_isr_handler_add(RED_LED_GPIO, gpio_interrupt_handler, (void *)RED_LED_GPIO);
 
-
-    printf("\nRunning the GPIO demo:\n");
-    gpio_demo();
 
     printf("\nRunning the light ADC demo (20 reads - cover/uncover the sensor):\n");
     light_adc_demo();
