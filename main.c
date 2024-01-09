@@ -464,7 +464,7 @@ void light_adc_demo()
     const char *intensity;
     // Configuring the ADC
     adc1_config_width(ADC_WIDTH_BIT_12);
-    adc1_config_channel_atten(ADC1_CHANNEL_1, ADC_ATTEN_DB_11); // ADC1_CHANNEL_0 is on GPIO0 (GPIOzero)
+    adc1_config_channel_atten(ADC1_CHANNEL_1, ADC_ATTEN_DB_11); // ADC1_CHANNEL_1 is on GPIO1 (GPIOOne)
 
     for (int i = 0; i < 20; i++)
     {
