@@ -32,7 +32,7 @@
 
 #define tag "EXAMPLE_ALL"
 
-#define RED_LED_GPIO 8
+#define RED_LED_GPIO 9
 #define BUTTON_1_GPIO_PIN 18
 #define BUTTON_2_GPIO_PIN 19
 
