@@ -17,9 +17,6 @@
 #include "driver/gpio.h"
 #include "driver/adc.h"
 
-//andet
-#include "freertos/queue.h"
-
 //Display libraies
 #include "ssd1306.h"
 #include "font8x8_basic.h"
@@ -64,47 +61,30 @@
 #define BUZZ_DUTY               (4096) // Set duty to 50%. (2 ** 13) * 50% = 4096
 #define BUZZ_FREQUENCY          (1000) // Frequency in Hertz. Set frequency at 1 kHz
 
-int state = 0;
-QueueHandle_t interputQueue;
+void print_info(){
+    /* Print chip information */
+    esp_chip_info_t chip_info;
+    uint32_t flash_size;
+    esp_chip_info(&chip_info);
+    printf("This is %s chip with %d CPU core(s), WiFi%s%s, ",
+           CONFIG_IDF_TARGET,
+           chip_info.cores,
+           (chip_info.features & CHIP_FEATURE_BT) ? "/BT" : "",
+           (chip_info.features & CHIP_FEATURE_BLE) ? "/BLE" : "");
 
-void loopDeLoop(){
-    
-}
-
-static void IRAM_ATTR gpio_interrupt_handler(void *args)
-{
-    int pinNumber = (int)args;
-    xQueueSendFromISR(interputQueue, &pinNumber, NULL);
-}
-
-void LED_Control_Task(void *params)
-{
-    int state = 0;
-    int pinNumber, count = 0;
-    while (true)
-    {
-        if (xQueueReceive(interputQueue, &pinNumber, portMAX_DELAY))
-        {
-            count++;
-            if (count % 2 == 0)
-            {
-                if (state == 0)
-                {
-                    state = 1;
-                    gpio_set_level(RED_LED_GPIO, state);
-                }
-                else
-                {
-                    state = 0;
-                    gpio_set_level(RED_LED_GPIO, state);
-                }
-                printf("GPIO %d was pressed %d times. The state is %d\n", pinNumber, count / 2, state);
-            }
-        }
+    unsigned major_rev = chip_info.revision / 100;
+    unsigned minor_rev = chip_info.revision % 100;
+    printf("silicon revision v%d.%d, ", major_rev, minor_rev);
+    if(esp_flash_get_size(NULL, &flash_size) != ESP_OK) {
+        printf("Get flash size failed");
+        return;
     }
+
+    printf("%uMB %s flash\n", flash_size / (1024 * 1024),
+           (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
+
+    printf("Minimum free heap size: %d bytes\n", esp_get_minimum_free_heap_size());
 }
-
-
 
 void display_demo(){
     SSD1306_t dev;
@@ -356,54 +336,38 @@ void buzzer_demo(){
     ESP_LOGI(tag, "Initialization complete. Playing 3 tones.");
 
     // Set duty
-    ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 4096)); //50% duty //Can change 4096 to different sound qualities like "3*4096/4" which gives 75% 
+    ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 4096)); //50% duty
     // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(BUZZ_MODE, BUZZ_CHANNEL));
     //1000 ms delay
     ESP_LOGI(tag, "Playing 1000 Hz.");
     vTaskDelay((600) / portTICK_PERIOD_MS);
 
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 23.12)); //50% duty f#
-    ESP_LOGI(tag, "Playing 23.12 Hz.");
-    vTaskDelay((600) / portTICK_PERIOD_MS);
-    // 9 minor - //F#0 G1 Ab2 A3 Bb4 B5 - //23.12, 49, 103.83, 220, 466.16, 987.77
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 49)); //50% duty G1
-    ESP_LOGI(tag, "Playing 24.50 Hz.");
-    vTaskDelay((600) / portTICK_PERIOD_MS);
-
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 103.83)); //50% duty Ab2
-    ESP_LOGI(tag, "Playing 51.91 Hz.");
-    vTaskDelay((600) / portTICK_PERIOD_MS);
-
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 220)); //50% duty A3
-    ESP_LOGI(tag, "Playing 27.50 Hz.");
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 400)); //50% duty
+    ESP_LOGI(tag, "Playing 600 Hz.");
     vTaskDelay((600) / portTICK_PERIOD_MS);
     
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 466.16)); //50% duty Bb4
-    ESP_LOGI(tag, "Playing 29.14 Hz.");
-    vTaskDelay((600) / portTICK_PERIOD_MS);
-    
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 987.77)); //50% duty B5
-    ESP_LOGI(tag, "Playing 30.87 Hz.");
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 800)); //50% duty
+    ESP_LOGI(tag, "Playing 800 Hz.");
     vTaskDelay((600) / portTICK_PERIOD_MS);
 
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 523)); // 50% duty C5
-    ESP_LOGI(tag, "Playing C5 tone at 523 Hz.");
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 1000)); //50% duty
+    ESP_LOGI(tag, "Playing 1000 Hz.");
     vTaskDelay((600) / portTICK_PERIOD_MS);
 
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 587)); // 50% duty D5
-    ESP_LOGI(tag, "Playing D5 tone at 587 Hz.");
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 400)); //50% duty
+    ESP_LOGI(tag, "Playing 600 Hz.");
     vTaskDelay((600) / portTICK_PERIOD_MS);
     
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 659)); // 50% duty E5
-    ESP_LOGI(tag, "Playing E5 tone at 659 Hz.");
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 800)); //50% duty
+    ESP_LOGI(tag, "Playing 800 Hz.");
     vTaskDelay((600) / portTICK_PERIOD_MS);
+
     // Set duty
     ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 0)); //0% duty
     // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(BUZZ_MODE, BUZZ_CHANNEL));
     ESP_LOGI(tag, "Buzzer off.");
-
 
 }
 
@@ -493,6 +457,9 @@ void app_main(void)
 {
     printf("Hello! Starting now with the demos ;-)\n");
 
+    printf("\nPrinting device information:\n");
+    print_info();
+
     //Initialize common I2C port for display, soil sensor, and temperature/umidity sensor
     //Initialized it as follows only once here in the main, then use the shared_init 
     //functions for the different components as shown in this demo (see _demo functions).
@@ -507,25 +474,8 @@ void app_main(void)
     i2c_param_config(I2C_NUM, &conf);
     ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0));
 
-    interputQueue = xQueueCreate(1, sizeof(int));
-    if (interputQueue == NULL)
-    {
-        // Handle error: Queue creation failed
-        ESP_LOGE("Queue Create", "Failed to create queue");
-        return;
-    }
-
-    BaseType_t taskCreated = xTaskCreate(LED_Control_Task, "LED_Control_Task", 2048, NULL, 1, NULL);
-    if (taskCreated != pdPASS)
-    {
-        // Handle error: Task creation failed
-        ESP_LOGE("Task Create", "Failed to create task");
-        return;
-    }
-
-    gpio_install_isr_service(0);
-    gpio_isr_handler_add(RED_LED_GPIO, gpio_interrupt_handler, (void *)RED_LED_GPIO);
-
+    printf("\nRunning the GPIO demo:\n");
+    gpio_demo();
 
     printf("\nRunning the light ADC demo (20 reads - cover/uncover the sensor):\n");
     light_adc_demo();
