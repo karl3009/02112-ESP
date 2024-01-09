@@ -55,7 +55,7 @@
 
 #define BUZZ_TIMER LEDC_TIMER_1
 #define BUZZ_MODE LEDC_LOW_SPEED_MODE
-#define BUZZ_OUTPUT_IO (9) // Define the output GPIO for red
+#define BUZZ_OUTPUT_IO (0) // Define the output GPIO for red
 #define BUZZ_CHANNEL LEDC_CHANNEL_4
 #define BUZZ_DUTY_RES LEDC_TIMER_13_BIT // Set duty resolution to 13 bits
 #define BUZZ_DUTY (4096)                // Set duty to 50%. (2 ** 13) * 50% = 4096
