@@ -311,7 +311,6 @@ void led_fade_demo()
         // printf("%d\n", duty);
     }
 }
-
 void buzzer_demo()
 {
     // Prepare and then apply the LEDC PWM timer configuration (we use it for the buzzer)
@@ -338,62 +337,32 @@ void buzzer_demo()
     ESP_LOGI(tag, "Initialization complete. Playing 3 tones.");
 
     // Set duty
-    ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 3 * 4096 / 4)); // 50% duty //Can change 4096 to different sound qualities like "3*4096/4" which gives 75%
+    ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 3 * 4096 / 4)); // 75% duty
     // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(BUZZ_MODE, BUZZ_CHANNEL));
-    // 1000 ms delay
-    ESP_LOGI(tag, "Playing 1000 Hz.");
-    vTaskDelay((500) / portTICK_PERIOD_MS);
 
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 5919.91)); // 50% duty f#
-    ESP_LOGI(tag, "Playing 23.12 Hz.");
-    vTaskDelay((500) / portTICK_PERIOD_MS);
-    // 9 minor - //F#0 G1 Ab2 A3 Bb4 B5 - //23.12, 49, 103.83, 220, 466.16, 987.77
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 3135.96)); // 50% duty G1
-    ESP_LOGI(tag, "Playing 24.50 Hz.");
-    vTaskDelay((400) / portTICK_PERIOD_MS);
+    ESP_LOGI(tag, "Rick Astley - Never Gonna Give You Up");
 
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 1864.66)); // 50% duty Ab2
-    ESP_LOGI(tag, "Playing 51.91 Hz.");
-    vTaskDelay((300) / portTICK_PERIOD_MS);
+    // Define note frequencies and durations for the chorus of "Never Gonna Give You Up"
+    double notes[] = {329.63, 293.66, 261.63, 246.94, 220.00, 195.99, 174.61, 164.81,
+                      220.00, 195.99, 174.61, 155.56, 174.61, 195.99, 220.00, 220.00,
+                      195.99, 174.61, 195.99, 220.00, 293.66, 293.66};
+    int durations[] = {500, 500, 500, 250, 250, 250, 250, 1000,
+                       500, 500, 500, 250, 250, 250, 250, 1000,
+                       500, 500, 500, 250, 250, 500};
 
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 1760)); // 50% duty A3
-    ESP_LOGI(tag, "Playing 27.50 Hz.");
-    vTaskDelay((300) / portTICK_PERIOD_MS);
-
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 932.33)); // 50% duty Bb4
-    ESP_LOGI(tag, "Playing 29.14 Hz.");
-    vTaskDelay((200) / portTICK_PERIOD_MS);
-
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 987.77)); // 50% duty B5
-    ESP_LOGI(tag, "Playing 30.87 Hz.");
-    vTaskDelay((400) / portTICK_PERIOD_MS);
-//////////////////////////////// RICK ROLL
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 391.995)); // 50% duty B5
-    ESP_LOGI(tag, "Playing 30.87 Hz.");
-    vTaskDelay((400) / portTICK_PERIOD_MS);
-
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 391.995)); // 50% duty B5
-    ESP_LOGI(tag, "Playing 30.87 Hz.");
-    vTaskDelay((400) / portTICK_PERIOD_MS);
-
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 391.995)); // 50% duty B5
-    ESP_LOGI(tag, "Playing 30.87 Hz.");
-    vTaskDelay((400) / portTICK_PERIOD_MS);
-
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 391.995)); // 50% duty B5
-    ESP_LOGI(tag, "Playing 30.87 Hz.");
-    vTaskDelay((400) / portTICK_PERIOD_MS);
-
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 391.995)); // 50% duty B5
-    ESP_LOGI(tag, "Playing 30.87 Hz.");
-    vTaskDelay((400) / portTICK_PERIOD_MS);
+    for (int i = 0; i < 21; i++)
+    {
+        ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, notes[i]));
+        vTaskDelay((durations[i]) / portTICK_PERIOD_MS);
+    }
 
     // Set duty
     ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 0)); // 0% duty
     // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(BUZZ_MODE, BUZZ_CHANNEL));
-    ESP_LOGI(tag, "Buzzer off.");
+
+    ESP_LOGI(tag, "Rick Astley - Never Gonna Give You Up - Finished");
 }
 
 void gpio_demo()
