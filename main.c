@@ -338,36 +338,57 @@ void buzzer_demo()
     ESP_LOGI(tag, "Initialization complete. Playing 3 tones.");
 
     // Set duty
-    ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 3*4096/4)); // 50% duty //Can change 4096 to different sound qualities like "3*4096/4" which gives 75%
+    ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 3 * 4096 / 4)); // 50% duty //Can change 4096 to different sound qualities like "3*4096/4" which gives 75%
     // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(BUZZ_MODE, BUZZ_CHANNEL));
     // 1000 ms delay
     ESP_LOGI(tag, "Playing 1000 Hz.");
-    vTaskDelay((1000) / portTICK_PERIOD_MS);
+    vTaskDelay((500) / portTICK_PERIOD_MS);
 
     ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 5919.91)); // 50% duty f#
     ESP_LOGI(tag, "Playing 23.12 Hz.");
-    vTaskDelay((1000) / portTICK_PERIOD_MS);
+    vTaskDelay((500) / portTICK_PERIOD_MS);
     // 9 minor - //F#0 G1 Ab2 A3 Bb4 B5 - //23.12, 49, 103.83, 220, 466.16, 987.77
     ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 3135.96)); // 50% duty G1
     ESP_LOGI(tag, "Playing 24.50 Hz.");
-    vTaskDelay((1000) / portTICK_PERIOD_MS);
+    vTaskDelay((400) / portTICK_PERIOD_MS);
 
     ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 1864.66)); // 50% duty Ab2
     ESP_LOGI(tag, "Playing 51.91 Hz.");
-    vTaskDelay((1000) / portTICK_PERIOD_MS);
+    vTaskDelay((300) / portTICK_PERIOD_MS);
 
     ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 1760)); // 50% duty A3
     ESP_LOGI(tag, "Playing 27.50 Hz.");
-    vTaskDelay((1000) / portTICK_PERIOD_MS);
+    vTaskDelay((300) / portTICK_PERIOD_MS);
 
     ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 932.33)); // 50% duty Bb4
     ESP_LOGI(tag, "Playing 29.14 Hz.");
-    vTaskDelay((1000) / portTICK_PERIOD_MS);
+    vTaskDelay((200) / portTICK_PERIOD_MS);
 
     ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 987.77)); // 50% duty B5
     ESP_LOGI(tag, "Playing 30.87 Hz.");
-    vTaskDelay((1000) / portTICK_PERIOD_MS);
+    vTaskDelay((400) / portTICK_PERIOD_MS);
+//////////////////////////////// RICK ROLL
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 391.995)); // 50% duty B5
+    ESP_LOGI(tag, "Playing 30.87 Hz.");
+    vTaskDelay((400) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 391.995)); // 50% duty B5
+    ESP_LOGI(tag, "Playing 30.87 Hz.");
+    vTaskDelay((400) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 391.995)); // 50% duty B5
+    ESP_LOGI(tag, "Playing 30.87 Hz.");
+    vTaskDelay((400) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 391.995)); // 50% duty B5
+    ESP_LOGI(tag, "Playing 30.87 Hz.");
+    vTaskDelay((400) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 391.995)); // 50% duty B5
+    ESP_LOGI(tag, "Playing 30.87 Hz.");
+    vTaskDelay((400) / portTICK_PERIOD_MS);
+
     // Set duty
     ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 0)); // 0% duty
     // Update duty to apply the new value
