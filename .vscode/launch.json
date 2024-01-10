@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "c:/Users/dingv/OneDrive/Uni/1.Semester/02112/DEMO/sample_project/02112-ESP",
-      "program": "c:/Users/dingv/OneDrive/Uni/1.Semester/02112/DEMO/sample_project/02112-ESP/build/Debug/outDebug",
+      "cwd": "c:/Users/dingv/OneDrive/Uni/1.Semester/02112/DEMO/02112-ESP",
+      "program": "c:/Users/dingv/OneDrive/Uni/1.Semester/02112/DEMO/02112-ESP/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
