@@ -27,9 +27,15 @@
 // Stemma soil sensor library
 #include "Adafruit_Stemma_soil_sensor.h"
 
+// Interupt
+#include "freertos/queue.h"
+
+// Buzzer
+#include "C:/Users/karlp/DEMO/components/components/pitches/include/pitches.h"
+
 #define tag "EXAMPLE_ALL"
 
-#define RED_LED_GPIO 9
+#define RED_LED_GPIO 8
 #define BUTTON_1_GPIO_PIN 18
 #define BUTTON_2_GPIO_PIN 19
 
@@ -60,6 +66,8 @@
 #define BUZZ_DUTY_RES LEDC_TIMER_13_BIT // Set duty resolution to 13 bits
 #define BUZZ_DUTY (4096)                // Set duty to 50%. (2 ** 13) * 50% = 4096
 #define BUZZ_FREQUENCY (1000)           // Frequency in Hertz. Set frequency at 1 kHz
+
+QueueHandle_t interputQueue;
 
 void print_info()
 {
@@ -311,6 +319,7 @@ void led_fade_demo()
         // printf("%d\n", duty);
     }
 }
+
 void buzzer_demo()
 {
     // Prepare and then apply the LEDC PWM timer configuration (we use it for the buzzer)
@@ -364,7 +373,6 @@ void buzzer_demo()
 
     ESP_LOGI(tag, "Rick Astley - Never Gonna Give You Up - Finished");
 }
-
 void gpio_demo()
 {
     gpio_config_t io_conf;
@@ -439,37 +447,72 @@ void gpio_demo()
 
 void light_adc_demo()
 {
-    const char *intensity;
     // Configuring the ADC
     adc1_config_width(ADC_WIDTH_BIT_12);
-    adc1_config_channel_atten(ADC1_CHANNEL_1, ADC_ATTEN_DB_11); // ADC1_CHANNEL_1 is on GPIO1 (GPIOOne)
+    adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_DB_11); // ADC1_CHANNEL_0 is on GPIO0 (GPIOzero)
 
     for (int i = 0; i < 20; i++)
     {
-        int val = adc1_get_raw(ADC1_CHANNEL_1);
-        if (val < 10)
-        {
-            intensity = "Dark";
-        }
-        else if (val < 200)
-        {
-            intensity = "Dim";
-        }
-        else if (val < 500)
-        {
-            intensity = "Light";
-        }
-        else if (val < 800)
-        {
-            intensity = "Bright";
-        }
-        else
-        {
-            intensity = "Very bright";
-        }
-
-        ESP_LOGI(tag, "Light sensor ADC value: %d: %s", val, intensity);
+        int val = adc1_get_raw(ADC1_CHANNEL_0);
+        ESP_LOGI(tag, "Light sensor ADC value: %d", val);
         vTaskDelay(pdMS_TO_TICKS(500)); // Delay for 1 second
+    }
+}
+
+void setup()
+{
+    gpio_config_t io_conf;
+    io_conf.pin_bit_mask = (1ULL << BUTTON_1_GPIO_PIN);
+    io_conf.mode = GPIO_MODE_INPUT;
+    io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    gpio_config(&io_conf);
+
+    io_conf.pin_bit_mask = (1ULL << BUTTON_2_GPIO_PIN);
+    io_conf.mode = GPIO_MODE_INPUT;
+    io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    gpio_config(&io_conf);
+}
+
+static void IRAM_ATTR gpio_interrupt_handler(void *args)
+{
+    int pinNumber = (int)args;
+    xQueueSendFromISR(interputQueue, &pinNumber, NULL);
+}
+
+void LED_Control_Task(void *params)
+{
+    int state = 0;
+    int pinNumber, count = 0;
+    while (true)
+    {
+        if (xQueueReceive(interputQueue, &pinNumber, portMAX_DELAY))
+        {
+            count++;
+            if (count % 2 == 0)
+            {
+                if (pinNumber == 18)
+                {
+                    printf("asd");
+                }
+                if (pinNumber == 19)
+                {
+                    buzzer_demo();
+                }
+
+                /*
+                if (state == 0)
+                {
+                    state = 1;
+                }
+                else
+                {
+                    state = 0;
+                }*/
+                printf("GPIO %d was pressed %d times. The state is %d\n", pinNumber, count / 2, state);
+            }
+        }
     }
 }
 
@@ -483,7 +526,7 @@ void app_main(void)
     // Initialize common I2C port for display, soil sensor, and temperature/umidity sensor
     // Initialized it as follows only once here in the main, then use the shared_init
     // functions for the different components as shown in this demo (see _demo functions).
-    i2c_config_t conf;
+    /*i2c_config_t conf;
     conf.mode = I2C_MODE_MASTER;
     conf.sda_io_num = I2C_MASTER_SDA_GPIO;
     conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
@@ -492,32 +535,69 @@ void app_main(void)
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
     conf.clk_flags = 0;
     i2c_param_config(I2C_NUM, &conf);
-    ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0));
+    ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0));*/
 
-    printf("\nRunning the GPIO demo:\n");
-    gpio_demo();
+    printf("\nDestroying the program");
+    // setup();
+    gpio_config_t io_conf;
 
-    printf("\nRunning the light ADC demo (20 reads - cover/uncover the sensor):\n");
-    light_adc_demo();
+    gpio_reset_pin(BUTTON_1_GPIO_PIN);
+    gpio_set_direction(BUTTON_1_GPIO_PIN, GPIO_MODE_INPUT);
+    gpio_pulldown_en(BUTTON_1_GPIO_PIN);
+    gpio_pullup_dis(BUTTON_1_GPIO_PIN);
+    gpio_set_intr_type(BUTTON_1_GPIO_PIN, GPIO_INTR_ANYEDGE);
+    gpio_config(&io_conf);
 
-    printf("\nRunning the buzzer demo:\n");
-    buzzer_demo();
+    gpio_reset_pin(BUTTON_2_GPIO_PIN);
+    gpio_set_direction(BUTTON_2_GPIO_PIN, GPIO_MODE_INPUT);
+    gpio_pulldown_en(BUTTON_2_GPIO_PIN);
+    gpio_pullup_dis(BUTTON_2_GPIO_PIN);
+    gpio_set_intr_type(BUTTON_2_GPIO_PIN, GPIO_INTR_ANYEDGE);
+    gpio_config(&io_conf);
 
-    printf("\nRunning RGB LED demo (look at the LED!):\n");
-    led_fade_demo();
+    interputQueue = xQueueCreate(1, sizeof(int));
+    if (interputQueue == NULL)
+    {
+        // Handle error: Queue creation failed
+        ESP_LOGE("Queue Create", "Failed to create queue");
+        return;
+    }
 
-    printf("\nRunning display demo (look at the display!):\n");
-    display_demo();
+    BaseType_t taskCreated = xTaskCreate(LED_Control_Task, "LED_Control_Task", 2048, NULL, 1, NULL);
+    if (taskCreated != pdPASS)
+    {
+        // Handle error: Task creation failed
+        ESP_LOGE("Task Create", "Failed to create task");
+        return;
+    }
 
-    printf("\nRunning temperature/humidity sensor demo (20 reads - touch/blow on the sensor to see changes):\n");
-    temperaure_humidity_demo();
+    gpio_install_isr_service(0);
+    gpio_isr_handler_add(BUTTON_1_GPIO_PIN, gpio_interrupt_handler, (void *)BUTTON_1_GPIO_PIN);
+    gpio_isr_handler_add(BUTTON_2_GPIO_PIN, gpio_interrupt_handler, (void *)BUTTON_2_GPIO_PIN);
+    // printf("\nRunning the GPIO demo:\n");
+    // gpio_demo();
 
-    printf("\nRunning STEMMA soil sensor demo: (20 reads - touch the sensor to see changes)\n");
-    stemma_soil_demo();
+    // printf("\nRunning the light ADC demo (20 reads - cover/uncover the sensor):\n");
+    // light_adc_demo();
 
-    printf("\nThe demos are finished. Prees the reset button if you want to restart.\n");
-    printf("Use the code in the demo in your own software. Goodbye!\n");
-    fflush(stdout);
+    // printf("\nRunning the buzzer demo:\n");
+    // buzzer_demo();
+
+    // printf("\nRunning RGB LED demo (look at the LED!):\n");
+    // led_fade_demo();
+
+    // printf("\nRunning display demo (look at the display!):\n");
+    // display_demo();
+
+    // printf("\nRunning temperature/humidity sensor demo (20 reads - touch/blow on the sensor to see changes):\n");
+    // temperaure_humidity_demo();
+
+    // printf("\nRunning STEMMA soil sensor demo: (20 reads - touch the sensor to see changes)\n");
+    // stemma_soil_demo();
+
+    // printf("\nThe demos are finished. Prees the reset button if you want to restart.\n");
+    // printf("Use the code in the demo in your own software. Goodbye!\n");
+    // fflush(stdout);
 
     // This would automatically restart the ESP32
     // esp_restart();
