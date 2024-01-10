@@ -1,0 +1,18 @@
+---DONE---
+Interupts (knapper virker)
+Opsat logik til Light sensor
+
+
+
+---Fremlæggelse---
+Schematics og powerpoint - karl
+knap til skifte menu - søren
+
+
+---TO DO---
+calibration of the 3 sensors values -søren
+Buzzer 
+Threshhold for lys og fugtighed - søren
+Temperatur skal bare kalibreres -søren
+Display information - victor
+Opdate data
