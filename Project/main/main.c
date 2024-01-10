@@ -483,6 +483,7 @@ static void IRAM_ATTR gpio_interrupt_handler(void *args)
 
 void LED_Control_Task(void *params)
 {
+    int switchState = 0;
     int state = 0;
     int pinNumber, count = 0;
     while (true)
@@ -494,22 +495,38 @@ void LED_Control_Task(void *params)
             {
                 if (pinNumber == 18)
                 {
-                    printf("asd");
+                    switchState--;
+                    if (switchState == -1)
+                    {
+                        switchState = 3;
+                    }
                 }
                 if (pinNumber == 19)
                 {
-                    buzzer_demo();
+                    switchState++;
+                    if (switchState == 4)
+                    {
+                        switchState = 0;
+                    }
                 }
 
-                /*
-                if (state == 0)
+                if (switchState == 0)
                 {
-                    state = 1;
+                    buzzer_demo();
                 }
-                else
+                if (switchState == 1)
                 {
-                    state = 0;
-                }*/
+                    temperaure_humidity_demo();
+                }
+                if (switchState == 2)
+                {
+                    light_adc_demo();
+                }
+                if (switchState == 3)
+                {
+                    stemma_soil_demo();
+                }
+
                 printf("GPIO %d was pressed %d times. The state is %d\n", pinNumber, count / 2, state);
             }
         }
