@@ -31,7 +31,6 @@
 #include "freertos/queue.h"
 
 // Buzzer
-#include "C:/Users/karlp/DEMO/components/components/pitches/include/pitches.h"
 
 #define tag "EXAMPLE_ALL"
 
@@ -226,14 +225,14 @@ void stemma_soil_demo()
 
         if (ret == ESP_OK)
         {
-            ESP_LOGI(tag, "Adafruit Stemma sensor value: =%u", moisture_value);
+            ESP_LOGI(tag, "Moisture value: \t%u", moisture_value - 650);
         }
 
         ret = adafruit_stemma_soil_sensor_read_temperature(I2C_NUM, &temperature_value);
 
         if (ret == ESP_OK)
         {
-            ESP_LOGI(tag, "Adafruit Stemma sensor value: =%f", temperature_value);
+            ESP_LOGI(tag, "Temperature value: \t%.1f", temperature_value);
         }
 
         // 500 ms delay
@@ -449,12 +448,34 @@ void light_adc_demo()
 {
     // Configuring the ADC
     adc1_config_width(ADC_WIDTH_BIT_12);
-    adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_DB_11); // ADC1_CHANNEL_0 is on GPIO0 (GPIOzero)
+    adc1_config_channel_atten(ADC1_CHANNEL_1, ADC_ATTEN_DB_11); // ADC1_CHANNEL_0 is on GPIO0 (GPIOzero)
 
     for (int i = 0; i < 20; i++)
     {
-        int val = adc1_get_raw(ADC1_CHANNEL_0);
+        int val = adc1_get_raw(ADC1_CHANNEL_1);
         ESP_LOGI(tag, "Light sensor ADC value: %d", val);
+
+        if (val < 10)
+        {
+            printf( " - Dark");
+        }
+        else if (val < 200)
+        {
+            printf( " - Dim");
+        }
+        else if (val < 500)
+        {
+            printf( " - Light");
+        }
+        else if (val < 800)
+        {
+            printf( " - Bright");
+        }
+        else
+        {
+            printf( " - Very bright");
+        }
+
         vTaskDelay(pdMS_TO_TICKS(500)); // Delay for 1 second
     }
 }
@@ -481,11 +502,20 @@ static void IRAM_ATTR gpio_interrupt_handler(void *args)
     xQueueSendFromISR(interputQueue, &pinNumber, NULL);
 }
 
-void LED_Control_Task(void *params)
+void button_switch(void *params)
 {
-    int switchState = 0;
+    int switchState = 3;
+    const char *programRunning[] = {"fade", "air", "light", "soil"}; // Array of strings
     int state = 0;
     int pinNumber, count = 0;
+
+    // printf("\nInitializing\n");
+    // for (int i = 0; i < 3; i++)
+    // {
+    //     vTaskDelay(50);
+    //     printf("%d/3...\n", i + 1);
+    // }
+
     while (true)
     {
         if (xQueueReceive(interputQueue, &pinNumber, portMAX_DELAY))
@@ -493,38 +523,30 @@ void LED_Control_Task(void *params)
             count++;
             if (count % 2 == 0)
             {
-                if (pinNumber == 18)
-                {
-                    switchState--;
-                    if (switchState == -1)
-                    {
-                        switchState = 3;
-                    }
-                }
+
                 if (pinNumber == 19)
                 {
-                    switchState++;
-                    if (switchState == 4)
-                    {
-                        switchState = 0;
-                    }
+                    switchState = (switchState + 1) % 4; // Cycles through 0, 1, 2, 3
+                    printf("Program : %d | %s \t|", switchState, programRunning[switchState]);
                 }
 
-                if (switchState == 0)
+                if (pinNumber == 18)
                 {
-                    buzzer_demo();
-                }
-                if (switchState == 1)
-                {
-                    temperaure_humidity_demo();
-                }
-                if (switchState == 2)
-                {
-                    light_adc_demo();
-                }
-                if (switchState == 3)
-                {
-                    stemma_soil_demo();
+                    switch (switchState)
+                    {
+                    case 0:
+                        led_fade_demo();
+                        break;
+                    case 1:
+                        temperaure_humidity_demo();
+                        break;
+                    case 2:
+                        light_adc_demo();
+                        break;
+                    case 3:
+                        stemma_soil_demo();
+                        break;
+                    }
                 }
 
                 printf("GPIO %d was pressed %d times. The state is %d\n", pinNumber, count / 2, state);
@@ -532,7 +554,6 @@ void LED_Control_Task(void *params)
         }
     }
 }
-
 void app_main(void)
 {
     printf("Hello! Starting now with the demos ;-)\n");
@@ -543,7 +564,7 @@ void app_main(void)
     // Initialize common I2C port for display, soil sensor, and temperature/umidity sensor
     // Initialized it as follows only once here in the main, then use the shared_init
     // functions for the different components as shown in this demo (see _demo functions).
-    /*i2c_config_t conf;
+    i2c_config_t conf;
     conf.mode = I2C_MODE_MASTER;
     conf.sda_io_num = I2C_MASTER_SDA_GPIO;
     conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
@@ -552,7 +573,7 @@ void app_main(void)
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
     conf.clk_flags = 0;
     i2c_param_config(I2C_NUM, &conf);
-    ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0));*/
+    ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0));
 
     printf("\nDestroying the program");
     // setup();
@@ -580,7 +601,7 @@ void app_main(void)
         return;
     }
 
-    BaseType_t taskCreated = xTaskCreate(LED_Control_Task, "LED_Control_Task", 2048, NULL, 1, NULL);
+    BaseType_t taskCreated = xTaskCreate(button_switch, "button_switch", 2048, NULL, 1, NULL);
     if (taskCreated != pdPASS)
     {
         // Handle error: Task creation failed

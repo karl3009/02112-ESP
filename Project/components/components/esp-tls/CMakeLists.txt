@@ -14,7 +14,7 @@ if(NOT ${IDF_TARGET} STREQUAL "linux")
     list(APPEND priv_req lwip)
 endif()
 
-idf_component_register(SRCS "${srcs}"
+idf_component_register(SRCS "esp_tls_error_capture.c" "esp_tls.c" "${srcs}"
                     INCLUDE_DIRS . esp-tls-crypto
                     PRIV_INCLUDE_DIRS "private_include"
                     # mbedtls is public requirements becasue esp_tls.h
