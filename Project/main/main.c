@@ -207,11 +207,11 @@ void temperaure_humidity(float *temp, int *hum)
 
     float temperature, humidity;
 
-        esp_err_t res = am2320_get_rht(&dev, &temperature, &humidity);
-        // 500 ms delay
-        vTaskDelay((500) / portTICK_PERIOD_MS);
-        *temp = temperature;
-        *hum = humidity;
+    esp_err_t res = am2320_get_rht(&dev, &temperature, &humidity);
+    // 500 ms delay
+    vTaskDelay((500) / portTICK_PERIOD_MS);
+    *temp = temperature;
+    *hum = humidity;
 }
 
 void stemma_soil(int *moisture_result, float *temperature_result)
@@ -223,25 +223,24 @@ void stemma_soil(int *moisture_result, float *temperature_result)
     // Initialize the sensor (shared i2c) only once after boot.
     ESP_ERROR_CHECK(adafruit_stemma_soil_sensor_shared_i2c_init());
 
-   
-        ret = adafruit_stemma_soil_sensor_read_moisture(I2C_NUM, &moisture_value);
+    ret = adafruit_stemma_soil_sensor_read_moisture(I2C_NUM, &moisture_value);
 
-        if (ret == ESP_OK)
-        {
-            ESP_LOGI(tag, "Moisture value: \t%u", moisture_value - 650);
-        }
+    if (ret == ESP_OK)
+    {
+        ESP_LOGI(tag, "Moisture value: \t%u", moisture_value - 650);
+    }
 
-        ret = adafruit_stemma_soil_sensor_read_temperature(I2C_NUM, &temperature_value);
+    ret = adafruit_stemma_soil_sensor_read_temperature(I2C_NUM, &temperature_value);
 
-        if (ret == ESP_OK)
-        {
-            ESP_LOGI(tag, "Temperature value: \t%.1f", temperature_value);
-        }
-        
-        // 500 ms delay
-        vTaskDelay((500) / portTICK_PERIOD_MS);
-        *moisture_result = moisture_value - 650;
-        *temperature_result = temperature_value;    
+    if (ret == ESP_OK)
+    {
+        ESP_LOGI(tag, "Temperature value: \t%.1f", temperature_value);
+    }
+
+    // 500 ms delay
+    vTaskDelay((500) / portTICK_PERIOD_MS);
+    *moisture_result = moisture_value - 650;
+    *temperature_result = temperature_value;
 }
 
 void light_adc(int *light_result)
@@ -250,13 +249,11 @@ void light_adc(int *light_result)
     adc1_config_width(ADC_WIDTH_BIT_12);
     adc1_config_channel_atten(ADC1_CHANNEL_1, ADC_ATTEN_DB_11); // ADC1_CHANNEL_0 is on GPIO0 (GPIOzero)
 
-   
-        int val = adc1_get_raw(ADC1_CHANNEL_1);
-        ESP_LOGI(tag, "Light sensor ADC value: %d", val);
-        // 500 ms delay
-        vTaskDelay(pdMS_TO_TICKS(500)); // Delay for 1 secon
-        *light_result = val;
-    
+    int val = adc1_get_raw(ADC1_CHANNEL_1);
+    ESP_LOGI(tag, "Light sensor ADC value: %d", val);
+    // 500 ms delay
+    vTaskDelay(pdMS_TO_TICKS(500)); // Delay for 1 secon
+    *light_result = val;
 }
 
 void sensors_task(void *params)
@@ -279,7 +276,7 @@ void sensors_task(void *params)
 
     while (1)
     {
-        //Stemma
+        // Stemma
         ret = adafruit_stemma_soil_sensor_read_moisture(I2C_NUM, &moisture_value);
 
         if (ret == ESP_OK)
@@ -294,7 +291,7 @@ void sensors_task(void *params)
             ESP_LOGI(tag, "Temperature value: \t%.1f", temperature_value);
         }
 
-        //Humidity
+        // Humidity
         esp_err_t res = am2320_get_rht(&dev, &temperature, &humidity);
         if (res == ESP_OK)
             ESP_LOGI(tag, "Temperature: %.1f°C, Humidity: %.1f%%", temperature, humidity);
@@ -305,12 +302,13 @@ void sensors_task(void *params)
     }
 }
 
-void init_i2c(){
-     // Initialize common I2C port for display, soil sensor, and temperature/umidity sensor
+void init_i2c()
+{
+    // Initialize common I2C port for display, soil sensor, and temperature/umidity sensor
     // Initialized it as follows only once here in the main, then use the shared_init
     // functions for the different components as shown in this demo (see _demo functions).
-    
-      i2c_config_t conf;
+
+    i2c_config_t conf;
     conf.mode = I2C_MODE_MASTER;
     conf.sda_io_num = I2C_MASTER_SDA_GPIO;
     conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
@@ -320,7 +318,6 @@ void init_i2c(){
     conf.clk_flags = 0;
     i2c_param_config(I2C_NUM, &conf);
     ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0));
-
 }
 
 void temperaure_humidity_demo()
@@ -640,49 +637,49 @@ static void IRAM_ATTR gpio_interrupt_handler(void *args)
     xQueueSendFromISR(interputQueue, &pinNumber, NULL);
 }
 
-void display_all(){
+void display_all()
+{
     int moisture_result;
     float temperature_result;
     stemma_soil(&moisture_result, &temperature_result);
 
     float temp;
     int hum;
-    temperaure_humidity(&temp, &hum); 
+    temperaure_humidity(&temp, &hum);
 
     int light_result;
     light_adc(&light_result);
 
     SSD1306_t dev;
     int center, top; //, bottom;
-  
+
     i2c_master_shared_i2c_init(&dev);
 
     ssd1306_init(&dev, 128, 64);
     char soil_m_result[32];
     char soil_t_result[32];
-    sprintf(soil_m_result,"Gnd Hum: %d", moisture_result);
-    sprintf(soil_t_result,"Gnd Tmp: %.1fC", temperature_result);
+    sprintf(soil_m_result, "Gnd Mst: %d", moisture_result);
+    sprintf(soil_t_result, "Gnd Tmp: %.1fC", temperature_result);
 
     char air_m_result[32];
     char air_t_result[32];
-    sprintf(air_m_result,"Air Hum: %d%%  ", hum);
-    sprintf(air_t_result,"Air Tmp: %.1fC", temp);
+    sprintf(air_m_result, "Air Hum: %d%%  ", hum);
+    sprintf(air_t_result, "Air Tmp: %.1fC", temp);
 
     char light_display[32];
-    sprintf(light_display,"LGT lvl: %d", light_result);
+    sprintf(light_display, "LGT lvl: %d", light_result);
 
     ESP_LOGI(tag, "Writing some text line by line (notice the 2 different colours)");
     top = 2;
     center = 3;
     // bottom = 8;
 
-    ssd1306_clear_line(&dev, 0, true);
+    // ssd1306_clear_line(&dev, 0, true);
     ssd1306_display_text(&dev, 2, soil_m_result, strlen(soil_m_result), false);
     ssd1306_display_text(&dev, 3, soil_t_result, strlen(soil_t_result), false);
     ssd1306_display_text(&dev, 4, air_m_result, strlen(air_t_result), false);
     ssd1306_display_text(&dev, 5, air_t_result, strlen(air_m_result), false);
     ssd1306_display_text(&dev, 6, light_display, strlen(light_display), false);
-
 }
 
 void button_switch()
@@ -693,7 +690,6 @@ void button_switch()
     const char currentProgram[32];
     int state = 0;
     int pinNumber, count = 0;
-
 
     printf("\nInitializing\n");
     for (int i = 0; i < 3; i++)
@@ -716,7 +712,7 @@ void button_switch()
                     sprintf(currentProgram, "%d. %s", switchState + 1, programRunning[switchState]);
 
                     display_menu(currentProgram);
-                    printf("Program : %d | %s \t|", switchState, currentProgram);
+                    printf("Program : %s \t|", currentProgram);
                 }
 
                 if (pinNumber == 18)
@@ -724,9 +720,13 @@ void button_switch()
                     switch (switchState)
                     {
                     case 0:
-
-                        display_all();
+                        do
+                        {
+                            display_all();
+                            vTaskDelay(100 / portTICK_PERIOD_MS);
+                        } while (switchState == 0);
                         break;
+
                     case 1:
                         temperaure_humidity_demo();
                         break;
@@ -742,15 +742,16 @@ void button_switch()
                 printf("GPIO %d was pressed %d times. The state is %d\n", pinNumber, count / 2, state);
             }
         }
-        vTaskDelay(50/portTICK_PERIOD_MS);
+        vTaskDelay(50 / portTICK_PERIOD_MS);
     }
 }
 
-void button(gpio_num_t GPIO){
-    
+void button(gpio_num_t GPIO)
+{
+
     gpio_config_t io_conf;
 
-    //Button GPIO
+    // Button GPIO
     gpio_reset_pin(GPIO);
     gpio_set_direction(GPIO, GPIO_MODE_INPUT);
     gpio_pulldown_en(GPIO);
@@ -768,8 +769,6 @@ void button(gpio_num_t GPIO){
 
     gpio_install_isr_service(0);
     gpio_isr_handler_add(GPIO, gpio_interrupt_handler, (void *)GPIO);
-
-
 }
 void app_main(void)
 {
@@ -777,8 +776,8 @@ void app_main(void)
     print_info();
 
     init_i2c();
-    
-    //Buttons
+
+    // Buttons
     button(BUTTON_1_GPIO_PIN);
     button(BUTTON_2_GPIO_PIN);
 
