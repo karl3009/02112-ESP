@@ -245,7 +245,7 @@ void stemma_soil(int *moisture_result, float *temperature_result)
     *temperature_result = temperature_value;
 }
 
-void light_adc(int *light_result)
+void light_adc(int *light_result, const char *intensity)
 {
     // Configuring the ADC
     adc1_config_width(ADC_WIDTH_BIT_12);
@@ -256,6 +256,26 @@ void light_adc(int *light_result)
     // 500 ms delay
     vTaskDelay(pdMS_TO_TICKS(500)); // Delay for 1 secon
     *light_result = val;
+    if (val < 10)
+    {
+        *intensity = "way too Dark :(";
+    }
+    else if (val < 200)
+    {
+        *intensity = "pretty Dim :|";
+    }
+    else if (val < 500)
+    {
+        *intensity = "nicely Lit :D";
+    }
+    else if (val < 800)
+    {
+        *intensity = "pretty Bright :)";
+    }
+    else
+    {
+        *intensity = "way too Bright! :(";
+    }
 }
 
 void sensors_task(void *params)
@@ -639,7 +659,8 @@ static void IRAM_ATTR gpio_interrupt_handler(void *args)
     xQueueSendFromISR(interputQueue, &pinNumber, NULL);
 }
 
-void initDisplay(SSD1306_t *dev){
+void initDisplay(SSD1306_t *dev)
+{
     i2c_master_shared_i2c_init(dev);
 
     ssd1306_init(dev, 128, 64);
@@ -664,8 +685,6 @@ void display_all(SSD1306_t *dev)
 
     // int center, top; //, bottom;
 
-
-    
     char soil_m_result[32];
     char soil_t_result[32];
     sprintf(soil_m_result, "Gnd Mst: %d", moisture_result);
@@ -691,9 +710,86 @@ void display_all(SSD1306_t *dev)
     ssd1306_display_text(dev, 6, light_display, strlen(light_display), false);
 }
 
+void display_light()
+{
+    int light_result;
+    const char intensity;
+    light_adc(&light_result, &intensity);
+
+    SSD1306_t dev;
+    int center, top; //, bottom;
+
+    i2c_master_shared_i2c_init(&dev);
+    char light_display[32];
+    char light_txt1[32];
+    char light_txt2[32];
+    sprintf(light_display, "LGT lvl: %d", light_result);
+    sprintf(light_txt1, "Your room is%s", "");
+    sprintf(light_txt2, "%s", intensity);
+
+    ESP_LOGI(tag, "Writing some text line by line (notice the 2 different colours)");
+    top = 2;
+    center = 3;
+    // bottom = 8;
+
+    // ssd1306_clear_line(&dev, 0, true);
+    ssd1306_display_text(&dev, 2, light_display, strlen(light_display), false);
+    ssd1306_display_text(&dev, 3, light_txt1, strlen(light_txt1), false);
+    ssd1306_display_text(&dev, 4, light_txt2, strlen(light_txt2), false);
+}
+void display_air()
+{
+    float temp;
+    int hum;
+    temperaure_humidity(&temp, &hum);
+
+    SSD1306_t dev;
+    int center, top; //, bottom;
+
+    i2c_master_shared_i2c_init(&dev);
+    char air_m_result[32];
+    char air_t_result[32];
+    sprintf(air_m_result, "Air Hum: %d%%  ", hum);
+    sprintf(air_t_result, "Air Tmp: %.1fC", temp);
+
+    ESP_LOGI(tag, "Writing some text line by line (notice the 2 different colours)");
+    top = 2;
+    center = 3;
+    // bottom = 8;
+
+    // ssd1306_clear_line(&dev, 0, true);
+    ssd1306_display_text(&dev, 2, air_m_result, strlen(air_m_result), false);
+    ssd1306_display_text(&dev, 3, air_t_result, strlen(air_t_result), false);
+}
+
+void display_soil()
+{
+
+    int moisture_result;
+    float temperature_result;
+    stemma_soil(&moisture_result, &temperature_result);
+
+    SSD1306_t dev;
+    int center, top; //, bottom;
+
+    i2c_master_shared_i2c_init(&dev);
+    char soil_m_result[32];
+    char soil_t_result[32];
+    sprintf(soil_m_result, "Gnd Mst: %d", moisture_result);
+    sprintf(soil_t_result, "Gnd Tmp: %.1fC", temperature_result);
+
+    ESP_LOGI(tag, "Writing some text line by line (notice the 2 different colours)");
+    top = 2;
+    center = 3;
+    // bottom = 8;
+
+    // ssd1306_clear_line(&dev, 0, true);
+    ssd1306_display_text(&dev, 2, soil_m_result, strlen(soil_m_result), false);
+    ssd1306_display_text(&dev, 3, soil_t_result, strlen(soil_t_result), false);
+}
+
 void button_switch(SSD1306_t *dev)
-{   
-   
+{
 
     int switchState = 3;
     const char *programRunning[] = {"Display values", "air", "light", "soil"}; // Array of strings
@@ -730,16 +826,18 @@ void button_switch(SSD1306_t *dev)
                     switch (switchState)
                     {
                     case 0:
-                        do {
-                                display_all(dev);
-                                vTaskDelay(100 / portTICK_PERIOD_MS);
-                                if (buttonPressed) {
-                                    buttonPressed = false; // Reset the flag
-                                    break; // Exit the loop if button was pressed
-                                }
-                                vTaskDelay(100 / portTICK_PERIOD_MS);
-                            } while (switchState == 0);
-                            break;
+                        do
+                        {
+                            display_all(dev);
+                            vTaskDelay(100 / portTICK_PERIOD_MS);
+                            if (buttonPressed)
+                            {
+                                buttonPressed = false; // Reset the flag
+                                break;                 // Exit the loop if button was pressed
+                            }
+                            vTaskDelay(100 / portTICK_PERIOD_MS);
+                        } while (switchState == 0);
+                        break;
 
                     case 1:
                         temperaure_humidity_demo();
@@ -786,7 +884,7 @@ void button(gpio_num_t GPIO)
 }
 void app_main(void)
 {
-    
+
     printf("\nPrinting device information:\n");
     print_info();
 
