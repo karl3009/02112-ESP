@@ -38,7 +38,7 @@
 #define BUTTON_1_GPIO_PIN 18
 #define BUTTON_2_GPIO_PIN 19
 
-#define I2C_MASTER_FREQ_HZ 75000 // Reduce it to 50000 if the temperature/umidity sensor fails
+#define I2C_MASTER_FREQ_HZ 50000 // Reduce it to 50000 if the temperature/umidity sensor fails
 #define I2C_MASTER_TX_BUF_DISABLE 0
 #define I2C_MASTER_RX_BUF_DISABLE 0
 #define I2C_MASTER_SDA_GPIO 2
@@ -94,6 +94,22 @@ void print_info()
 
     printf("Minimum free heap size: %ld bytes\n", esp_get_minimum_free_heap_size());
 }
+
+void display_menu(const char *message)
+{
+    SSD1306_t dev;
+    i2c_master_shared_i2c_init(&dev);
+    ssd1306_init(&dev, 128, 64);
+    
+
+    ESP_LOGI(tag, "Displaying menu on OLED.");
+    ssd1306_clear_screen(&dev, false);
+    ssd1306_contrast(&dev, 0xff);
+    ssd1306_display_text(&dev, 0, message, strlen(message), false);
+    vTaskDelay(20 / portTICK_PERIOD_MS);
+}
+
+
 
 void display_demo()
 {
@@ -184,8 +200,6 @@ void display_demo()
     ssd1306_contrast(&dev, 0xff);
     ssd1306_display_text(&dev, center, "  Good Bye!!", 12, true);
 
-    // delay 2 seconds
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
 }
 
 void temperaure_humidity_demo()
@@ -446,6 +460,9 @@ void gpio_demo()
 
 void light_adc_demo()
 {
+
+    const char *intensity;
+
     // Configuring the ADC
     adc1_config_width(ADC_WIDTH_BIT_12);
     adc1_config_channel_atten(ADC1_CHANNEL_1, ADC_ATTEN_DB_11); // ADC1_CHANNEL_0 is on GPIO0 (GPIOzero)
@@ -453,29 +470,29 @@ void light_adc_demo()
     for (int i = 0; i < 20; i++)
     {
         int val = adc1_get_raw(ADC1_CHANNEL_1);
-        ESP_LOGI(tag, "Light sensor ADC value: %d", val);
 
-        if (val < 10)
+        if (val < 100)
         {
-            printf( " - Dark");
+            intensity = "Dark";
         }
-        else if (val < 200)
+        else if (val < 250)
         {
-            printf( " - Dim");
+            intensity = "Dim";
         }
-        else if (val < 500)
+        else if (val < 600)
         {
-            printf( " - Light");
+            intensity = "Light";
         }
-        else if (val < 800)
+        else if (val < 900)
         {
-            printf( " - Bright");
+            intensity = "Bright";
         }
         else
         {
-            printf( " - Very bright");
+            intensity = "Very bright";
         }
 
+        ESP_LOGI(tag, "Light sensor ADC value: %d: %s", val, intensity);
         vTaskDelay(pdMS_TO_TICKS(500)); // Delay for 1 second
     }
 }
@@ -502,19 +519,23 @@ static void IRAM_ATTR gpio_interrupt_handler(void *args)
     xQueueSendFromISR(interputQueue, &pinNumber, NULL);
 }
 
-void button_switch(void *params)
+void button_switch()
 {
+
     int switchState = 3;
     const char *programRunning[] = {"fade", "air", "light", "soil"}; // Array of strings
+    const char currentProgram[32];
     int state = 0;
     int pinNumber, count = 0;
 
-    // printf("\nInitializing\n");
-    // for (int i = 0; i < 3; i++)
-    // {
-    //     vTaskDelay(50);
-    //     printf("%d/3...\n", i + 1);
-    // }
+    char snum[5];
+
+    printf("\nInitializing\n");
+    for (int i = 0; i < 3; i++)
+    {
+        vTaskDelay(50);
+        printf("%d/3...\n", i + 1);
+    }
 
     while (true)
     {
@@ -523,11 +544,18 @@ void button_switch(void *params)
             count++;
             if (count % 2 == 0)
             {
-
                 if (pinNumber == 19)
                 {
                     switchState = (switchState + 1) % 4; // Cycles through 0, 1, 2, 3
-                    printf("Program : %d | %s \t|", switchState, programRunning[switchState]);
+
+                    //itoa(switchState, snum, 10);
+                    //sprintf()
+                    //currentProgram =  programRunning[switchState];
+
+                    sprintf(currentProgram, "%d. %s", switchState, programRunning[switchState]);
+
+                    display_menu(currentProgram);
+                    printf("Program : %d | %s \t|", switchState, currentProgram);
                 }
 
                 if (pinNumber == 18)
@@ -535,6 +563,7 @@ void button_switch(void *params)
                     switch (switchState)
                     {
                     case 0:
+
                         led_fade_demo();
                         break;
                     case 1:
@@ -554,6 +583,7 @@ void button_switch(void *params)
         }
     }
 }
+
 void app_main(void)
 {
     printf("Hello! Starting now with the demos ;-)\n");
@@ -601,17 +631,19 @@ void app_main(void)
         return;
     }
 
-    BaseType_t taskCreated = xTaskCreate(button_switch, "button_switch", 2048, NULL, 1, NULL);
-    if (taskCreated != pdPASS)
-    {
-        // Handle error: Task creation failed
-        ESP_LOGE("Task Create", "Failed to create task");
-        return;
-    }
+    // //BaseType_t taskCreated = xTaskCreate(button_switch, "button_switch", 2048, NULL, 1, NULL);
+    // if (taskCreated != pdPASS)
+    // {
+    //     // Handle error: Task creation failed
+    //     ESP_LOGE("Task Create", "Failed to create task");
+    //     return;
+    // }
 
     gpio_install_isr_service(0);
     gpio_isr_handler_add(BUTTON_1_GPIO_PIN, gpio_interrupt_handler, (void *)BUTTON_1_GPIO_PIN);
     gpio_isr_handler_add(BUTTON_2_GPIO_PIN, gpio_interrupt_handler, (void *)BUTTON_2_GPIO_PIN);
+
+    button_switch();
     // printf("\nRunning the GPIO demo:\n");
     // gpio_demo();
 
