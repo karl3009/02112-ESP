@@ -253,6 +253,24 @@ void stemma_soil_demo()
         vTaskDelay((500) / portTICK_PERIOD_MS);
     }
 }
+void stemma_soil(int *moisture_result, float *temperature_result)
+{
+    int ret = ESP_OK;
+    uint16_t moisture_value = 0;
+    float temperature_value = 0;
+
+    // Initialize the sensor (shared i2c) only once after boot.
+    ESP_ERROR_CHECK(adafruit_stemma_soil_sensor_shared_i2c_init());
+
+    ret = adafruit_stemma_soil_sensor_read_moisture(I2C_NUM, &moisture_value);
+
+    ret = adafruit_stemma_soil_sensor_read_temperature(I2C_NUM, &temperature_value);
+
+    *moisture_result = moisture_value - 650;
+    *temperature_result = temperature_value;
+    // 500 ms delay
+    vTaskDelay((500) / portTICK_PERIOD_MS);
+}
 
 void led_fade_demo()
 {
