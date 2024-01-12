@@ -1,7 +1,7 @@
 /*
  * A components demo for course 02112
  */
-
+#include <unistd.h>
 #include <stdio.h>
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
@@ -16,6 +16,8 @@
 #include "driver/ledc.h"
 #include "driver/gpio.h"
 #include "driver/adc.h"
+#include "esp_spiffs.h"
+#include "esp_log.h"
 
 // Display libraies
 #include "ssd1306.h"
@@ -66,7 +68,10 @@
 #define BUZZ_DUTY (4096)                // Set duty to 50%. (2 ** 13) * 50% = 4096
 #define BUZZ_FREQUENCY (1000)           // Frequency in Hertz. Set frequency at 1 kHz
 
+// Custom:
 QueueHandle_t interputQueue;
+
+static const char *TAG = "FileSystem";
 
 volatile bool buttonPressed = false;
 
@@ -97,16 +102,12 @@ void print_info()
     printf("Minimum free heap size: %ld bytes\n", esp_get_minimum_free_heap_size());
 }
 
-void display_menu(const char *message)
+void display_menu(SSD1306_t *dev, const char *message)
 {
-    SSD1306_t dev;
-    i2c_master_shared_i2c_init(&dev);
-    ssd1306_init(&dev, 128, 64);
-
     ESP_LOGI(tag, "Displaying menu on OLED.");
-    ssd1306_clear_screen(&dev, false);
-    ssd1306_contrast(&dev, 0xff);
-    ssd1306_display_text(&dev, 0, message, strlen(message), false);
+    ssd1306_clear_screen(dev, false);
+    ssd1306_contrast(dev, 0xff);
+    ssd1306_display_text(dev, 0, message, strlen(message), false);
     vTaskDelay(20 / portTICK_PERIOD_MS);
 }
 
@@ -244,38 +245,16 @@ void stemma_soil(int *moisture_result, float *temperature_result)
     *moisture_result = moisture_value - 650;
     *temperature_result = temperature_value;
 }
-
-void light_adc(int *light_result, const char *intensity)
+void light_adc(int *light_result)
 {
     // Configuring the ADC
     adc1_config_width(ADC_WIDTH_BIT_12);
     adc1_config_channel_atten(ADC1_CHANNEL_1, ADC_ATTEN_DB_11); // ADC1_CHANNEL_0 is on GPIO0 (GPIOzero)
-
     int val = adc1_get_raw(ADC1_CHANNEL_1);
     ESP_LOGI(tag, "Light sensor ADC value: %d", val);
     // 500 ms delay
     vTaskDelay(pdMS_TO_TICKS(500)); // Delay for 1 secon
     *light_result = val;
-    if (val < 10)
-    {
-        *intensity = "way too Dark :(";
-    }
-    else if (val < 200)
-    {
-        *intensity = "pretty Dim :|";
-    }
-    else if (val < 500)
-    {
-        *intensity = "nicely Lit :D";
-    }
-    else if (val < 800)
-    {
-        *intensity = "pretty Bright :)";
-    }
-    else
-    {
-        *intensity = "way too Bright! :(";
-    }
 }
 
 void sensors_task(void *params)
@@ -500,22 +479,19 @@ void buzzer_demo()
 
     // Set duty
     ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 3 * 4096 / 4)); // 75% duty
+
     // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(BUZZ_MODE, BUZZ_CHANNEL));
 
     ESP_LOGI(tag, "Rick Astley - Never Gonna Give You Up");
 
     // Define note frequencies and durations for the chorus of "Never Gonna Give You Up"
-    double notes[] = {329.63, 293.66, 261.63, 246.94, 220.00, 195.99, 174.61, 164.81,
-                      220.00, 195.99, 174.61, 155.56, 174.61, 195.99, 220.00, 220.00,
-                      195.99, 174.61, 195.99, 220.00, 293.66, 293.66};
-    int durations[] = {500, 500, 500, 250, 250, 250, 250, 1000,
-                       500, 500, 500, 250, 250, 250, 250, 1000,
-                       500, 500, 500, 250, 250, 500};
+    double notes[] = {659, 831, 988, 1319, 988, 1319};
+    int durations[] = {300, 300, 300, 500, 300, 1000};
 
-    for (int i = 0; i < 21; i++)
+    for (int i = 0; i < 7; i++)
     {
-        ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, notes[i]));
+        ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, notes[i] * 2));
         vTaskDelay((durations[i]) / portTICK_PERIOD_MS);
     }
 
@@ -670,7 +646,7 @@ void initDisplay(SSD1306_t *dev)
     ssd1306_contrast(dev, 0xff);
 }
 
-void display_all(SSD1306_t *dev)
+char *display_all(SSD1306_t *dev)
 {
     int moisture_result;
     float temperature_result;
@@ -681,6 +657,7 @@ void display_all(SSD1306_t *dev)
     temperaure_humidity(&temp, &hum);
 
     int light_result;
+
     light_adc(&light_result);
 
     // int center, top; //, bottom;
@@ -698,69 +675,78 @@ void display_all(SSD1306_t *dev)
     char light_display[32];
     sprintf(light_display, "LGT lvl: %d", light_result);
 
-    // top = 2;
-    // center = 3;
-    // bottom = 8;
-
     // ssd1306_clear_line(&dev, 0, true);
     ssd1306_display_text(dev, 2, soil_m_result, strlen(soil_m_result), false);
     ssd1306_display_text(dev, 3, soil_t_result, strlen(soil_t_result), false);
     ssd1306_display_text(dev, 4, air_m_result, strlen(air_t_result), false);
     ssd1306_display_text(dev, 5, air_t_result, strlen(air_m_result), false);
     ssd1306_display_text(dev, 6, light_display, strlen(light_display), false);
+
+    char *str = malloc(40 * sizeof(char)); // Allocate memory
+    if (str == NULL)
+    {
+        // Handle allocation failure
+        exit(1);
+    }
+
+    sprintf(str, "\n%d, %.1f, %d, %.1f, %d\n", moisture_result, temperature_result, hum, temp, light_result);
+    return str;
 }
 
-void display_light(SSD1306_t *dev)
-{
-    int light_result;
-    const char intensity;
-    light_adc(&light_result, &intensity);
-
-    char light_display[32];
-    char light_txt1[32];
-    char light_txt2[32];
-    sprintf(light_display, "LGT lvl: %d", light_result);
-    sprintf(light_txt1, "Your room is%s", "");
-    sprintf(light_txt2, "%s", intensity);
-
-    // ssd1306_clear_line(&dev, 0, true);
-    ssd1306_display_text(dev, 2, light_display, strlen(light_display), false);
-    ssd1306_display_text(dev, 3, light_txt1, strlen(light_txt1), false);
-    ssd1306_display_text(dev, 4, light_txt2, strlen(light_txt2), false);
-}
-void display_air(SSD1306_t *dev)
-{
-    float temp;
-    int hum;
-    temperaure_humidity(&temp, &hum);
-
-    char air_m_result[32];
-    char air_t_result[32];
-    sprintf(air_m_result, "Air Hum: %d%%  ", hum);
-    sprintf(air_t_result, "Air Tmp: %.1fC", temp);
-
-    // ssd1306_clear_line(&dev, 0, true);
-    ssd1306_display_text(dev, 2, air_m_result, strlen(air_m_result), false);
-    ssd1306_display_text(dev, 3, air_t_result, strlen(air_t_result), false);
-}
-
-void display_soil(SSD1306_t *dev)
+void fileread(char *str)
 {
 
-    int moisture_result;
-    float temperature_result;
-    stemma_soil(&moisture_result, &temperature_result);
+    esp_vfs_spiffs_conf_t config = {
+        .base_path = "/storage",
+        .partition_label = NULL,
+        .max_files = 5,
+        .format_if_mount_failed = true};
+    esp_err_t result = esp_vfs_spiffs_register(&config);
 
-    char soil_m_result[32];
-    char soil_t_result[32];
-    sprintf(soil_m_result, "Gnd Mst: %d", moisture_result);
-    sprintf(soil_t_result, "Gnd Tmp: %.1fC", temperature_result);
+    if (result != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(result));
+        return;
+    }
 
-    // ssd1306_clear_line(&dev, 0, true);
-    ssd1306_display_text(dev, 2, soil_m_result, strlen(soil_m_result), false);
-    ssd1306_display_text(dev, 3, soil_t_result, strlen(soil_t_result), false);
+    size_t total = 0, used = 0;
+    result = esp_spiffs_info(config.partition_label, &total, &used);
+    if (result != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to get SPIFFS partition information (%s)", esp_err_to_name(result));
+    }
+    else
+    {
+        ESP_LOGI(TAG, "Partition size: total: %d, used: %d", total, used);
+    }
+
+    FILE *f = fopen("/storage/myfile.txt", "w");
+    if (f == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to open file for writing");
+        return;
+    }
+    fprintf(f, "%s", str);
+    fclose(f);
+    ESP_LOGI(TAG, "File written");
+
+    f = fopen("/storage/myfile.txt", "r");
+    if (f == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to open file for writing");
+        return;
+    }
+
+    char line[64];
+    printf("Read from file: '");
+    while (fgets(line, sizeof(line), f) != NULL)
+    {
+        printf("%s", line);
+    }
+    printf("'\n");
+
+    fclose(f);
 }
-
 void button_switch(SSD1306_t *dev)
 {
 
@@ -790,7 +776,7 @@ void button_switch(SSD1306_t *dev)
 
                     sprintf(currentProgram, "%d. %s", switchState + 1, programRunning[switchState]);
 
-                    display_menu(currentProgram);
+                    display_menu(dev, currentProgram);
                     printf("Program : %s \t|", currentProgram);
                 }
 
@@ -799,24 +785,55 @@ void button_switch(SSD1306_t *dev)
                     switch (switchState)
                     {
                     case 0:
-                        do
-                        {
-                            display_all(dev);
-                            vTaskDelay(100 / portTICK_PERIOD_MS);
-                            if (buttonPressed)
-                            {
-                                buttonPressed = false; // Reset the flag
-                                break;                 // Exit the loop if button was pressed
-                            }
-                            vTaskDelay(100 / portTICK_PERIOD_MS);
-                        } while (switchState == 0);
-                        break;
+                        int totalLength = 0;
+                        char *x = NULL;
+                        char *tempStr;
 
+                        for (int i = 0; i < 10; i++)
+                        {
+                            tempStr = display_all(dev);
+                            if (tempStr != NULL)
+                            {
+                                totalLength += strlen(tempStr) + 1; // +1 for null-terminator
+
+                                // Reallocate x with the new size
+                                char *new_x = realloc(x, totalLength * sizeof(char));
+                                if (new_x == NULL)
+                                {
+                                    // Handle allocation failure
+                                    ESP_LOGE(TAG, "Memory reallocation failed for x");
+                                    free(tempStr);
+                                    free(x);
+                                    break;
+                                }
+                                x = new_x;
+
+                                // Concatenate tempStr to x
+                                if (i == 0)
+                                {
+                                    strcpy(x, tempStr); // Copy first string
+                                }
+                                else
+                                {
+                                    strcat(x, tempStr); // Concatenate subsequent strings
+                                }
+
+                                free(tempStr); // Free tempStr after using it
+                            }
+                        }
+
+                        if (x != NULL)
+                        {
+                            fileread(x);
+                            free(x); // Free the concatenated string memory
+                        }
+
+                        break;
                     case 1:
-                        temperaure_humidity_demo();
+                        buzzer_demo();
                         break;
                     case 2:
-                        light_adc_demo();
+
                         break;
                     case 3:
                         stemma_soil_demo();
@@ -827,7 +844,6 @@ void button_switch(SSD1306_t *dev)
                 printf("GPIO %d was pressed %d times. The state is %d\n", pinNumber, count / 2, state);
             }
         }
-        vTaskDelay(50 / portTICK_PERIOD_MS);
     }
 }
 
@@ -844,7 +860,7 @@ void button(gpio_num_t GPIO)
     gpio_set_intr_type(GPIO, GPIO_INTR_ANYEDGE);
     gpio_config(&io_conf);
 
-    interputQueue = xQueueCreate(2, sizeof(int));
+    interputQueue = xQueueCreate(1, sizeof(int));
     if (interputQueue == NULL)
     {
         // Handle error: Queue creation failed
@@ -855,6 +871,7 @@ void button(gpio_num_t GPIO)
     gpio_install_isr_service(0);
     gpio_isr_handler_add(GPIO, gpio_interrupt_handler, (void *)GPIO);
 }
+
 void app_main(void)
 {
 
@@ -871,31 +888,5 @@ void app_main(void)
     button(BUTTON_2_GPIO_PIN);
 
     button_switch(&dev);
-    // printf("\nRunning the GPIO demo:\n");
-    // gpio_demo();
-
-    // printf("\nRunning the light ADC demo (20 reads - cover/uncover the sensor):\n");
-    // light_adc_demo();
-
-    // printf("\nRunning the buzzer demo:\n");
-    // buzzer_demo();
-
-    // printf("\nRunning RGB LED demo (look at the LED!):\n");
-    // led_fade_demo();
-
-    // printf("\nRunning display demo (look at the display!):\n");
-    // display_demo();
-
-    // printf("\nRunning temperature/humidity sensor demo (20 reads - touch/blow on the sensor to see changes):\n");
-    // temperaure_humidity_demo();
-
-    // printf("\nRunning STEMMA soil sensor demo: (20 reads - touch the sensor to see changes)\n");
-    // stemma_soil_demo();
-
-    // printf("\nThe demos are finished. Prees the reset button if you want to restart.\n");
-    // printf("Use the code in the demo in your own software. Goodbye!\n");
-    // fflush(stdout);
-
-    // This would automatically restart the ESP32
     // esp_restart();
 }
