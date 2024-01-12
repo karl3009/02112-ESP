@@ -710,16 +710,12 @@ void display_all(SSD1306_t *dev)
     ssd1306_display_text(dev, 6, light_display, strlen(light_display), false);
 }
 
-void display_light()
+void display_light(SSD1306_t *dev)
 {
     int light_result;
     const char intensity;
     light_adc(&light_result, &intensity);
 
-    SSD1306_t dev;
-    int center, top; //, bottom;
-
-    i2c_master_shared_i2c_init(&dev);
     char light_display[32];
     char light_txt1[32];
     char light_txt2[32];
@@ -727,65 +723,42 @@ void display_light()
     sprintf(light_txt1, "Your room is%s", "");
     sprintf(light_txt2, "%s", intensity);
 
-    ESP_LOGI(tag, "Writing some text line by line (notice the 2 different colours)");
-    top = 2;
-    center = 3;
-    // bottom = 8;
-
     // ssd1306_clear_line(&dev, 0, true);
-    ssd1306_display_text(&dev, 2, light_display, strlen(light_display), false);
-    ssd1306_display_text(&dev, 3, light_txt1, strlen(light_txt1), false);
-    ssd1306_display_text(&dev, 4, light_txt2, strlen(light_txt2), false);
+    ssd1306_display_text(dev, 2, light_display, strlen(light_display), false);
+    ssd1306_display_text(dev, 3, light_txt1, strlen(light_txt1), false);
+    ssd1306_display_text(dev, 4, light_txt2, strlen(light_txt2), false);
 }
-void display_air()
+void display_air(SSD1306_t *dev)
 {
     float temp;
     int hum;
     temperaure_humidity(&temp, &hum);
 
-    SSD1306_t dev;
-    int center, top; //, bottom;
-
-    i2c_master_shared_i2c_init(&dev);
     char air_m_result[32];
     char air_t_result[32];
     sprintf(air_m_result, "Air Hum: %d%%  ", hum);
     sprintf(air_t_result, "Air Tmp: %.1fC", temp);
 
-    ESP_LOGI(tag, "Writing some text line by line (notice the 2 different colours)");
-    top = 2;
-    center = 3;
-    // bottom = 8;
-
     // ssd1306_clear_line(&dev, 0, true);
-    ssd1306_display_text(&dev, 2, air_m_result, strlen(air_m_result), false);
-    ssd1306_display_text(&dev, 3, air_t_result, strlen(air_t_result), false);
+    ssd1306_display_text(dev, 2, air_m_result, strlen(air_m_result), false);
+    ssd1306_display_text(dev, 3, air_t_result, strlen(air_t_result), false);
 }
 
-void display_soil()
+void display_soil(SSD1306_t *dev)
 {
 
     int moisture_result;
     float temperature_result;
     stemma_soil(&moisture_result, &temperature_result);
 
-    SSD1306_t dev;
-    int center, top; //, bottom;
-
-    i2c_master_shared_i2c_init(&dev);
     char soil_m_result[32];
     char soil_t_result[32];
     sprintf(soil_m_result, "Gnd Mst: %d", moisture_result);
     sprintf(soil_t_result, "Gnd Tmp: %.1fC", temperature_result);
 
-    ESP_LOGI(tag, "Writing some text line by line (notice the 2 different colours)");
-    top = 2;
-    center = 3;
-    // bottom = 8;
-
     // ssd1306_clear_line(&dev, 0, true);
-    ssd1306_display_text(&dev, 2, soil_m_result, strlen(soil_m_result), false);
-    ssd1306_display_text(&dev, 3, soil_t_result, strlen(soil_t_result), false);
+    ssd1306_display_text(dev, 2, soil_m_result, strlen(soil_m_result), false);
+    ssd1306_display_text(dev, 3, soil_t_result, strlen(soil_t_result), false);
 }
 
 void button_switch(SSD1306_t *dev)
