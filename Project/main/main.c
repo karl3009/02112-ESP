@@ -1039,13 +1039,69 @@ void button_switch(SSD1306_t *dev)
         }
         else if (btn2)
         {
-            btn2 = 0;
-            printf("btn2\n");
+            switch (switchState)
+            {
+            case 0:
+                int totalLength = 0;
+                char *x = NULL;
+                char *tempStr;
+
+                for (int i = 0; i < 10; i++)
+                {
+                    tempStr = display_all(dev);
+                    if (tempStr != NULL)
+                    {
+                        totalLength += strlen(tempStr) + 1; // +1 for null-terminator
+
+                        // Reallocate x with the new size
+                        char *new_x = realloc(x, totalLength * sizeof(char));
+                        if (new_x == NULL)
+                        {
+                            // Handle allocation failure
+                            ESP_LOGE(TAG, "Memory reallocation failed for x");
+                            free(tempStr);
+                            free(x);
+                            break;
+                        }
+                        x = new_x;
+
+                        // Concatenate tempStr to x
+                        if (i == 0)
+                        {
+                            strcpy(x, tempStr); // Copy first string
+                        }
+                        else
+                        {
+                            strcat(x, tempStr); // Concatenate subsequent strings
+                        }
+
+                        free(tempStr); // Free tempStr after using it
+                    }
+                }
+
+                if (x != NULL)
+                {
+                    fileread(x);
+                    free(x); // Free the concatenated string memory
+                }
+
+                break;
+            case 1:
+                display_all2(dev);
+                break;
+            case 2:
+                buzzer_demo();
+                break;
+            case 3:
+                stemma_soil_demo();
+                break;
+            }
         }
-        else
-        {
-            vTaskDelay(500);
-        }
+    }
+    else
+    {
+        printf("waiting\n");
+        vTaskDelay(500);
     }
 }
 
