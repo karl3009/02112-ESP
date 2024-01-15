@@ -759,6 +759,7 @@ void app_main(void)
     init_i2c();
     SSD1306_t dev;
 
+    initfileread();
     initDisplay(&dev);
 
     gpio_config_t io_conf;
