@@ -71,7 +71,8 @@
 // Custom:
 QueueHandle_t interputQueue;
 
-int var;
+int btn1;
+int btn2;
 
 static const char *TAG = "FileSystem";
 
@@ -779,12 +780,15 @@ void setup()
     gpio_config(&io_conf);
 }
 
-void gpio_interrupt_handler(void *args)
+void gpio_interrupt_handler_1(void *args)
 {
-    //int pinNumber = (int)args;
-    //xQueueSendFromISR(interputQueue, &pinNumber, NULL);
-    var = 1;
+    btn1 = 1;
 }
+void gpio_interrupt_handler_2(void *args)
+{
+    btn2 = 1;
+}
+
 
 void initDisplay(SSD1306_t *dev)
 {
@@ -1024,90 +1028,18 @@ void button_switch(SSD1306_t *dev)
 
     while (true)
     {
-        if (var)
+        if (btn1)
         {
-            // count++;
-            // if (count % 2 == 0)
-            // {
-            //     if (pinNumber == 19)
-            //     {
-            //         switchState = (switchState + 1) % 4; // Cycles through 0, 1, 2, 3
-
-            //         sprintf(currentProgram, "%d. %s", switchState + 1, programRunning[switchState]);
-
-            //         display_menu(dev, currentProgram);
-            //         printf("Program : %s \t|", currentProgram);
-            //     }
-
-            //     if (pinNumber == 18)
-            //     {
-            //         switch (switchState)
-            //         {
-            //         case 0:
-            //             int totalLength = 0;
-            //             char *x = NULL;
-            //             char *tempStr;
-
-            //             for (int i = 0; i < 10; i++)
-            //             {
-            //                 tempStr = display_all(dev);
-            //                 if (tempStr != NULL)
-            //                 {
-            //                     totalLength += strlen(tempStr) + 1; // +1 for null-terminator
-
-            //                     // Reallocate x with the new size
-            //                     char *new_x = realloc(x, totalLength * sizeof(char));
-            //                     if (new_x == NULL)
-            //                     {
-            //                         // Handle allocation failure
-            //                         ESP_LOGE(TAG, "Memory reallocation failed for x");
-            //                         free(tempStr);
-            //                         free(x);
-            //                         break;
-            //                     }
-            //                     x = new_x;
-
-            //                     // Concatenate tempStr to x
-            //                     if (i == 0)
-            //                     {
-            //                         strcpy(x, tempStr); // Copy first string
-            //                     }
-            //                     else
-            //                     {
-            //                         strcat(x, tempStr); // Concatenate subsequent strings
-            //                     }
-
-            //                     free(tempStr); // Free tempStr after using it
-            //                 }
-            //             }
-
-            //             if (x != NULL)
-            //             {
-            //                 fileread(x);
-            //                 free(x); // Free the concatenated string memory
-            //             }
-
-            //             break;
-            //         case 1:
-            //             buzzer_demo();
-            //             break;
-            //         case 2:
-
-            //             break;
-            //         case 3:
-            //             stemma_soil_demo();
-            //             break;
-            //         }
-            //     }
-
-            //     printf("GPIO %d was pressed %d times. The state is %d\n", pinNumber, count / 2, state);
-            // }
-            var = 0;
+            btn1 = 0;
             printf("asd\n");
+        }
+        else if (btn2){
+            btn2=0;
+            printf("btn2\n");
         }
         else
         {
-            vTaskDelay(1000);
+            vTaskDelay(500);
         }
     }
 }
@@ -1118,23 +1050,20 @@ void button(gpio_num_t GPIO)
     gpio_config_t io_conf;
 
     // Button GPIO
-    gpio_install_isr_service(0);
+    
     gpio_reset_pin(GPIO);
     gpio_set_direction(GPIO, GPIO_MODE_INPUT);
     gpio_pulldown_en(GPIO);
-    // gpio_pullup_dis(GPIO);
     gpio_set_intr_type(GPIO, GPIO_INTR_ANYEDGE);
     gpio_config(&io_conf);
 
-    interputQueue = xQueueCreate(1, sizeof(int));
-    if (interputQueue == NULL)
-    {
-        // Handle error: Queue creation failed
-        ESP_LOGE("Queue Create", "Failed to create queue");
-        return;
-    }
-
-    gpio_isr_handler_add(GPIO, gpio_interrupt_handler, (void *)GPIO);
+    // interputQueue = xQueueCreate(1, sizeof(int));
+    // if (interputQueue == NULL)
+    // {
+    //     // Handle error: Queue creation failed
+    //     ESP_LOGE("Queue Create", "Failed to create queue");
+    //     return;
+    // }
 }
 
 void app_main(void)
@@ -1156,8 +1085,11 @@ void app_main(void)
     gpio_config(&io_conf);
 
     // Buttons
+    gpio_install_isr_service(0);
     button(BUTTON_1_GPIO_PIN);
+    gpio_isr_handler_add(BUTTON_1_GPIO_PIN, gpio_interrupt_handler_1, (void *)BUTTON_1_GPIO_PIN);
     button(BUTTON_2_GPIO_PIN);
+    gpio_isr_handler_add(BUTTON_2_GPIO_PIN, gpio_interrupt_handler_2, (void *)BUTTON_2_GPIO_PIN);
 
     button_switch(&dev);
     // esp_restart();
