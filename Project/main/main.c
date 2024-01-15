@@ -789,7 +789,6 @@ void gpio_interrupt_handler_2(void *args)
     btn2 = 1;
 }
 
-
 void initDisplay(SSD1306_t *dev)
 {
     i2c_master_shared_i2c_init(dev);
@@ -1031,10 +1030,16 @@ void button_switch(SSD1306_t *dev)
         if (btn1)
         {
             btn1 = 0;
-            printf("asd\n");
+            switchState = (switchState + 1) % 4; // Cycles through 0, 1, 2, 3
+
+            sprintf(currentProgram, "%d. %s", switchState + 1, programRunning[switchState]);
+
+            display_menu(dev, currentProgram);
+            printf("Program : %s \t|", currentProgram);
         }
-        else if (btn2){
-            btn2=0;
+        else if (btn2)
+        {
+            btn2 = 0;
             printf("btn2\n");
         }
         else
@@ -1050,7 +1055,7 @@ void button(gpio_num_t GPIO)
     gpio_config_t io_conf;
 
     // Button GPIO
-    
+
     gpio_reset_pin(GPIO);
     gpio_set_direction(GPIO, GPIO_MODE_INPUT);
     gpio_pulldown_en(GPIO);
