@@ -955,8 +955,9 @@ char *display_all(SSD1306_t *dev)
     return str;
 }
 
-char *display_all2(SSD1306_t *dev) {
-    #include <string.h>
+char *display_all2(SSD1306_t *dev)
+{
+#include <string.h>
 
     const char light_quality[32];
     const char air_humidity_quality[32];
@@ -1052,7 +1053,6 @@ char *display_all2(SSD1306_t *dev) {
         gpio_set_level(RED_LED_GPIO, 0);
     }
 
-
     ssd1306_display_text(dev, 2, soil_m_result2, strlen(soil_m_result2), false);
     ssd1306_display_text(dev, 3, soil_t_result2, strlen(soil_t_result2), false);
     ssd1306_display_text(dev, 4, air_m_result2, strlen(air_t_result2), false);
@@ -1141,7 +1141,7 @@ void button_switch(SSD1306_t *dev)
 {
 
     int switchState = 3;
-    const char *programRunning[] = {"Display values", "air", "light", "soil"}; // Array of strings
+    const char *programRunning[] = {"Display values", "Display condi.", "Buzzer", "soil"}; // Array of strings
     const char currentProgram[32];
     int state = 0;
     int pinNumber, count = 0;
@@ -1220,10 +1220,10 @@ void button_switch(SSD1306_t *dev)
 
                         break;
                     case 1:
-                        buzzer_demo();
+                        display_all2();
                         break;
                     case 2:
-
+                        buzzer_demo();
                         break;
                     case 3:
                         stemma_soil_demo();
@@ -1288,15 +1288,15 @@ void app_main(void)
     // esp_restart();
 }
 
-    char soil_m_result2[32];
-    char soil_t_result2[32];
-    sprintf(soil_m_result2, "Quality of soil mois: %s", soil_moisture_quality);
-    sprintf(soil_t_result2, "Quality of soil tmp: %s", soil_temperature_quality);
+char soil_m_result2[32];
+char soil_t_result2[32];
+sprintf(soil_m_result2, "Quality of soil mois: %s", soil_moisture_quality);
+sprintf(soil_t_result2, "Quality of soil tmp: %s", soil_temperature_quality);
 
-    char air_m_result2[32];
-    char air_t_result2[32];
-    sprintf(air_m_result2, "Quality of air hum: %s ", air_humidity_quality);
-    sprintf(air_t_result2, "Quality of air tmp: %s", air_temperature_quality);
+char air_m_result2[32];
+char air_t_result2[32];
+sprintf(air_m_result2, "Quality of air hum: %s ", air_humidity_quality);
+sprintf(air_t_result2, "Quality of air tmp: %s", air_temperature_quality);
 
-    char light_display2[32];
-    sprintf(light_display2, "Quality of light lvl: %s", light_quality);
+char light_display2[32];
+sprintf(light_display2, "Quality of light lvl: %s", light_quality);
