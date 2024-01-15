@@ -263,51 +263,118 @@ void buzzer()
 {
     // Prepare and then apply the LEDC PWM timer configuration (we use it for the buzzer)
     ledc_timer_config_t ledc_timer_buzz = {
-        .speed_mode = BUZZ_MODE,
-        .duty_resolution = BUZZ_DUTY_RES,
-        .timer_num = BUZZ_TIMER,
-        .freq_hz = BUZZ_FREQUENCY, // Set output frequency at 1 kHz
-        .clk_cfg = LEDC_AUTO_CLK};
+        .speed_mode       = BUZZ_MODE,
+        .duty_resolution  = BUZZ_DUTY_RES,
+        .timer_num        = BUZZ_TIMER,
+        .freq_hz          = BUZZ_FREQUENCY,  // Set output frequency at 1 kHz
+        .clk_cfg          = LEDC_AUTO_CLK
+    };
     ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer_buzz));
 
     // Prepare and then apply the LEDC PWM channel configuration
     ledc_channel_config_t ledc_channel_buzz = {
-        .speed_mode = BUZZ_MODE,
-        .channel = BUZZ_CHANNEL,
-        .timer_sel = BUZZ_TIMER,
-        .intr_type = LEDC_INTR_DISABLE,
-        .gpio_num = BUZZ_OUTPUT_IO,
-        .duty = 0, // Set duty to 0%
-        .hpoint = 0};
+        .speed_mode     = BUZZ_MODE,
+        .channel        = BUZZ_CHANNEL,
+        .timer_sel      = BUZZ_TIMER,
+        .intr_type      = LEDC_INTR_DISABLE,
+        .gpio_num       = BUZZ_OUTPUT_IO,
+        .duty           = 0, // Set duty to 0%
+        .hpoint         = 0
+    };
     ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel_buzz));
 
     // Now the initialization is done
-    ESP_LOGI(tag, "Initialization complete. Playing 3 tones.");
+    ESP_LOGI(tag, "Initialization complete. Playing 7 * 2 tones. First part slow, second part fast");
 
     // Set duty
-    ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 3 * 4096 / 4)); // 75% duty
-
+    ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 50 * 4095 / 100)); // 50% duty //Can change 4096 to different sound qualities like "3*4096/4" which gives 75%
     // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(BUZZ_MODE, BUZZ_CHANNEL));
+    // 1000 ms delay
+    ESP_LOGI(tag, "Delaying for 1000ms.");
+    vTaskDelay((1000) / portTICK_PERIOD_MS);
+    // Playing frequency:
 
-    ESP_LOGI(tag, "Rick Astley - Never Gonna Give You Up");
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 523.25)); // 50% duty
+    ESP_LOGI(tag, "Playing C5 - 523.25 Hz.");
+    vTaskDelay((200) / portTICK_PERIOD_MS);
+    
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 587.33)); // 50% duty
+    ESP_LOGI(tag, "Playing D5 - 587.33 Hz.");
+    vTaskDelay((250) / portTICK_PERIOD_MS);
 
-    // Define note frequencies and durations for the chorus of "Never Gonna Give You Up"
-    double notes[] = {659, 831, 988, 1319, 988, 1319};
-    int durations[] = {300, 300, 300, 500, 300, 1000};
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 659.26)); // 50% duty
+    ESP_LOGI(tag, "Playing E5 - 659.26 Hz.");
+    vTaskDelay((200) / portTICK_PERIOD_MS);
 
-    for (int i = 0; i < 7; i++)
-    {
-        ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, notes[i] * 2));
-        vTaskDelay((durations[i]) / portTICK_PERIOD_MS);
-    }
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 698.46)); // 50% duty
+    ESP_LOGI(tag, "Playing F5 - 698.46 Hz.");
+    vTaskDelay((275) / portTICK_PERIOD_MS);
 
-    // Set duty
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 783.99)); // 50% duty
+    ESP_LOGI(tag, "Playing G5 - 783.99 Hz.");
+    vTaskDelay((225) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 880.00)); // 50% duty 
+    ESP_LOGI(tag, "Playing A5 - 880.00 Hz.");
+    vTaskDelay((150) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 987.77)); // 50% duty 
+    ESP_LOGI(tag, "Playing B5 - 987.77 Hz.");
+    vTaskDelay((800) / portTICK_PERIOD_MS);
+
+    ESP_LOGI(tag, "Now we come to the fast part.");
+    //Second wave of music coming right here, but now faster.
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 523.25)); // 50% duty
+    ESP_LOGI(tag, "Playing C5 - 523.25 Hz.");
+    vTaskDelay((75) / portTICK_PERIOD_MS);
+    
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 587.33)); // 50% duty
+    ESP_LOGI(tag, "Playing D5 - 587.33 Hz.");
+    vTaskDelay((100) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 659.26)); // 50% duty
+    ESP_LOGI(tag, "Playing E5 - 659.26 Hz.");
+    vTaskDelay((125) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 698.46)); // 50% duty
+    ESP_LOGI(tag, "Playing F5 - 698.46 Hz.");
+    vTaskDelay((100) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 783.99)); // 50% duty
+    ESP_LOGI(tag, "Playing G5 - 783.99 Hz.");
+    vTaskDelay((125) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 880.00)); // 50% duty
+    ESP_LOGI(tag, "Playing A5 - 880.00 Hz.");
+    vTaskDelay((100) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 987.77)); // 50% duty
+    ESP_LOGI(tag, "Playing B5 - 987.77 Hz.");
+    vTaskDelay((125) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 880.00)); // 50% duty
+    ESP_LOGI(tag, "Playing A5 - 880.00 Hz.");
+    vTaskDelay((100) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 783.99)); // 50% duty
+    ESP_LOGI(tag, "Playing G5 - 783.99 Hz.");
+    vTaskDelay((75) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 698.46)); // 50% duty
+    ESP_LOGI(tag, "Playing F5 - 698.46 Hz.");
+    vTaskDelay((50) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 659.26)); // 50% duty
+    ESP_LOGI(tag, "Playing E5 - 659.26 Hz.");
+    vTaskDelay((25) / portTICK_PERIOD_MS);
+
+
+    // Turning buzzer off here
+    vTaskDelay((400 / portTICK_PERIOD_MS));
     ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 0)); // 0% duty
-    // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(BUZZ_MODE, BUZZ_CHANNEL));
-
-    ESP_LOGI(tag, "Rick Astley - Never Gonna Give You Up - Finished");
+    ESP_LOGI(tag, "Buzzer is now off.");
 }
 
 
@@ -366,6 +433,159 @@ char *display_all(SSD1306_t *dev)
     }
 
     sprintf(str, "\n%d, %.1f, %d, %.1f, %d", moisture_result, temperature_result, hum, temp, light_result);
+    return str;
+}
+
+char *display_all2(SSD1306_t *dev) {
+    int soil_m_bad = 0;
+    int soil_t_bad = 0;
+    int air_t_bad = 0;
+    int air_h_bad = 0;
+
+    const char light_quality[32];
+    const char air_humidity_quality[32];
+    const char air_temperature_quality[32];
+    const char soil_moisture_quality[32];
+    const char soil_temperature_quality[32];
+
+    int moisture_result;
+    float temperature_result;
+    stemma_soil(&moisture_result, &temperature_result);
+
+    float temp;
+    int hum;
+    temperaure_humidity(&temp, &hum);
+
+    int light_result;
+    light_adc(&light_result);
+
+    int badCondition = 0;
+
+    if (moisture_result < 50)
+    {
+        badCondition = 1;
+        strcpy(soil_moisture_quality, "Too dry");
+        soil_m_bad = 1;
+    }
+    else if (moisture_result> 200)
+    {
+        badCondition = 1;
+        strcpy(soil_moisture_quality, "Too wet");
+        soil_m_bad = 1;
+    }
+    else
+    {
+        strcpy(soil_moisture_quality, "Good");
+    }
+
+    if (temperature_result < 12)
+    {
+        badCondition = 1;
+        strcpy(soil_temperature_quality, "Too cold");
+        soil_t_bad = 1;
+    }
+    else if (temperature_result > 27)
+    {
+        badCondition = 1;
+        strcpy(soil_temperature_quality, "Too hot");
+        soil_t_bad = 1;
+    }
+    else
+    {
+        strcpy(soil_temperature_quality, "Good");
+    }
+
+    if (temp < 12)
+    {
+        badCondition = 1;
+        strcpy(air_temperature_quality, "Too cold");
+        air_t_bad = 1;
+    }
+    else if (temp > 30)
+    {
+        badCondition = 1;
+        strcpy(air_temperature_quality, "Too hot");
+        air_t_bad = 1;
+    }
+    else
+    {
+        strcpy(air_temperature_quality, "Good");
+    }
+
+    if (hum < 10)
+    {
+        badCondition = 1;
+        strcpy(air_humidity_quality, "Too dry");
+        air_h_bad = 1;
+    }
+    else if (hum > 30)
+    {
+        badCondition = 1;
+        strcpy(air_humidity_quality, "Too wet");
+        air_h_bad = 1;
+    }
+    else
+    {
+        strcpy(air_humidity_quality, "Good");
+    }
+
+    if (light_result < 100)
+    {
+        strcpy(light_quality, "Dark");
+    }
+    else if (light_result < 250)
+    {
+        strcpy(light_quality, "Dim");
+    }
+    else if (light_result < 600)
+    {
+        strcpy(light_quality, "Light");
+    }
+    else if (light_result < 900)
+    {
+        strcpy(light_quality, "Bright");
+    }
+    else
+    {
+        strcpy(light_quality, "Very bright");
+    }
+
+    if (badCondition == 1)
+    {
+        gpio_set_level(RED_LED_GPIO, 1);
+    }
+    else
+    {
+        gpio_set_level(RED_LED_GPIO, 0);
+    }
+
+    const char soil_m_result[64];
+    const char soil_t_result[64];
+    sprintf(soil_m_result, "Quality of soil mois: %s", soil_moisture_quality);
+    sprintf(soil_t_result, "Quality of soil tmp: %s", soil_temperature_quality);
+
+    const char air_m_result[64];
+    const char air_t_result[64];
+    sprintf(air_m_result, "Quality of air hum: %s ", air_humidity_quality);
+    sprintf(air_t_result, "Quality of air tmp: %s", air_temperature_quality);
+
+    const char light_display[64];
+    sprintf(light_display, "Quality of light lvl: %s", light_quality);
+    
+    ssd1306_display_text(dev, 2, soil_m_result, strlen(soil_m_result), false);
+    ssd1306_display_text(dev, 3, soil_t_result, strlen(soil_t_result), false);
+    ssd1306_display_text(dev, 4, air_m_result, strlen(air_t_result), false);
+    ssd1306_display_text(dev, 5, air_t_result, strlen(air_m_result), false);
+    ssd1306_display_text(dev, 6, light_display, strlen(light_display), false);
+
+    char *str = malloc(200 * sizeof(char)); // Allocate memory
+    if (str == NULL)
+    {
+        // Handle allocation failure
+        exit(1);
+    }
+
+    sprintf(str, "\n%s, %s, %s, %s, %s\n", soil_moisture_quality, soil_temperature_quality, air_humidity_quality, air_temperature_quality, light_quality);
     return str;
 }
 
