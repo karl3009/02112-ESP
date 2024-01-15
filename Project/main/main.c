@@ -1091,7 +1091,7 @@ void fileread(char *str)
     esp_err_t result = esp_vfs_spiffs_register(&config);
 
     if (result != ESP_OK)
-    {
+    { 
         ESP_LOGE(TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(result));
         return;
     }
@@ -1228,7 +1228,7 @@ void button_switch(SSD1306_t *dev)
                     }
                 }
 
-                printf("GPIO %d was pressed %d times. The state is %d\n", pinNumber, count / 2, state);
+                printf("-GPIO %d was pressed %d times. The state is %d\n", pinNumber, count / 2, state);
             }
         }
     }
