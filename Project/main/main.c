@@ -648,6 +648,12 @@ void initDisplay(SSD1306_t *dev)
 
 char *display_all(SSD1306_t *dev)
 {
+
+    const char light_quality[32];
+    const char air_humidity_quality[32];
+    const char air_temperature_quality[32];
+    const char soil_moisture_quality[32];
+    const char soil_temperature_quality[32];
     int moisture_result;
     float temperature_result;
     stemma_soil(&moisture_result, &temperature_result);
@@ -659,6 +665,88 @@ char *display_all(SSD1306_t *dev)
     int light_result;
 
     light_adc(&light_result);
+
+    int badCondition = 0;
+    if (moisture_result < 50)
+    {
+        badCondition = 1;
+        soil_moisture_quality = "Too dry";
+        // too dry
+    }
+    else if (moisture_result > 200)
+    {
+        badCondition = 1;
+        soil_moisture_quality = "Too wet";
+        // too wet
+    }
+    else
+    {
+        soil_moisture_quality = "Good";
+    }
+
+    if (temperature_result < 12)
+    {
+        badCondition = 1;
+        soil_temperature_quality = "Too cold";
+        // too cold
+    }
+    else if (temperature_result > 27)
+    {
+        badCondition = 1;
+        soil_temperature_quality = "Too hot";
+        // too hot
+    }
+    else
+    {
+        soil_temperature_quality = "Good";
+    }
+
+    if (hum < 10)
+    {
+        badCondition = 1;
+        air_humidity_quality = "Too dry";
+        // too dry
+    }
+    else if (hum > 30)
+    {
+        badCondition = 1;
+        air_humidity_quality = "Too wet";
+        // too wet
+    }
+    else
+    {
+        air_humidity_quality = "Good";
+    }
+
+    if (light_result < 100)
+    {
+        light_quality = "Dark";
+    }
+    else if (light_result < 250)
+    {
+        light_quality = "Dim";
+    }
+    else if (light_result < 600)
+    {
+        light_quality = "Light";
+    }
+    else if (light_result < 900)
+    {
+        light_quality = "Bright";
+    }
+    else
+    {
+        light_quality = "Very bright";
+    }
+
+    if (badCondition == 1)
+    {
+        gpio_set_level(RED_LED_GPIO, 1);
+    }
+    else
+    {
+        gpio_set_level(RED_LED_GPIO, 0);
+    }
 
     // int center, top; //, bottom;
 
