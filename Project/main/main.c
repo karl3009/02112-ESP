@@ -378,20 +378,19 @@ void rgb(int soil_m_bad, int soil_t_bad, int air_h_bad, int air_t_bad, int good_
     int red_duty = 0;
     int green_duty = 0;
     int blue_duty = 0;
+    int scale = 8100 / 255;
 
     if (soil_m_bad == 1 || air_h_bad == 1)
     {
-        red_duty = 8192;
+        blue_duty = scale * 255;
     }
     if (soil_t_bad == 1 || air_t_bad == 1)
     {
-        blue_duty = 8192;
+        red_duty = scale * 255;
     }
     if (good_condition == 1)
     {
-        green_duty = 8192;
-        red_duty = 0;
-        blue_duty = 0;
+        green_duty = scale * 255;
     }
 
     ledc_timer_config_t ledc_timer = {
