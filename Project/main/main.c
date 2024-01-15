@@ -795,8 +795,7 @@ void initDisplay(SSD1306_t *dev)
 
 char *display_all(SSD1306_t *dev)
 {
-#include <string.h>
-    int soil_m_bad = 0;
+     int soil_m_bad = 0;
     int soil_t_bad = 0;
     int air_t_bad = 0;
     int air_h_bad = 0;
@@ -956,7 +955,6 @@ char *display_all(SSD1306_t *dev)
 }
 
 char *display_all2(SSD1306_t *dev) {
-    #include <string.h>
 
     const char light_quality[32];
     const char air_humidity_quality[32];
@@ -1052,17 +1050,17 @@ char *display_all2(SSD1306_t *dev) {
         gpio_set_level(RED_LED_GPIO, 0);
     }
 
-    const char soil_m_result[32];
-    const char soil_t_result[32];
+    const char soil_m_result[64];
+    const char soil_t_result[64];
     sprintf(soil_m_result, "Quality of soil mois: %s", soil_moisture_quality);
     sprintf(soil_t_result, "Quality of soil tmp: %s", soil_temperature_quality);
 
-    const char air_m_result[32];
-    const char air_t_result[32];
+    const char air_m_result[64];
+    const char air_t_result[64];
     sprintf(air_m_result, "Quality of air hum: %s ", air_humidity_quality);
     sprintf(air_t_result, "Quality of air tmp: %s", air_temperature_quality);
 
-    const char light_display[32];
+    const char light_display[64];
     sprintf(light_display, "Quality of light lvl: %s", light_quality);
     
     ssd1306_display_text(dev, 2, soil_m_result, strlen(soil_m_result), false);
@@ -1071,7 +1069,7 @@ char *display_all2(SSD1306_t *dev) {
     ssd1306_display_text(dev, 5, air_t_result, strlen(air_m_result), false);
     ssd1306_display_text(dev, 6, light_display, strlen(light_display), false);
 
-    char *str = malloc(40 * sizeof(char)); // Allocate memory
+    char *str = malloc(200 * sizeof(char)); // Allocate memory
     if (str == NULL)
     {
         // Handle allocation failure
@@ -1219,7 +1217,7 @@ void button_switch(SSD1306_t *dev)
 
                         break;
                     case 1:
-                        display_all2();
+                        display_all2(dev);
                         break;
                     case 2:
                         buzzer_demo();
@@ -1286,16 +1284,3 @@ void app_main(void)
     button_switch(&dev);
     // esp_restart();
 }
-
-char soil_m_result2[32];
-char soil_t_result2[32];
-sprintf(soil_m_result2, "Quality of soil mois: %s", soil_moisture_quality);
-sprintf(soil_t_result2, "Quality of soil tmp: %s", soil_temperature_quality);
-
-char air_m_result2[32];
-char air_t_result2[32];
-sprintf(air_m_result2, "Quality of air hum: %s ", air_humidity_quality);
-sprintf(air_t_result2, "Quality of air tmp: %s", air_temperature_quality);
-
-char light_display2[32];
-sprintf(light_display2, "Quality of light lvl: %s", light_quality);
