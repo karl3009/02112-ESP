@@ -955,9 +955,8 @@ char *display_all(SSD1306_t *dev)
     return str;
 }
 
-char *display_all2(SSD1306_t *dev)
-{
-#include <string.h>
+char *display_all2(SSD1306_t *dev) {
+    #include <string.h>
 
     const char light_quality[32];
     const char air_humidity_quality[32];
@@ -983,7 +982,7 @@ char *display_all2(SSD1306_t *dev)
         badCondition = 1;
         strcpy(soil_moisture_quality, "Too dry");
     }
-    else if (moisture_result > 200)
+    else if (moisture_result> 200)
     {
         badCondition = 1;
         strcpy(soil_moisture_quality, "Too wet");
@@ -1053,24 +1052,24 @@ char *display_all2(SSD1306_t *dev)
         gpio_set_level(RED_LED_GPIO, 0);
     }
 
-    ssd1306_display_text(dev, 2, soil_m_result2, strlen(soil_m_result2), false);
-    ssd1306_display_text(dev, 3, soil_t_result2, strlen(soil_t_result2), false);
-    ssd1306_display_text(dev, 4, air_m_result2, strlen(air_t_result2), false);
-    ssd1306_display_text(dev, 5, air_t_result2, strlen(air_m_result2), false);
-    ssd1306_display_text(dev, 6, light_display2, strlen(light_display2), false);
+    const char soil_m_result[32];
+    const char soil_t_result[32];
+    sprintf(soil_m_result, "Quality of soil mois: %s", soil_moisture_quality);
+    sprintf(soil_t_result, "Quality of soil tmp: %s", soil_temperature_quality);
 
-    const char soil_m_result2[32];
-    const char soil_t_result2[32];
-    sprintf(soil_m_result2, "Quality of soil mois: %s", soil_moisture_quality);
-    sprintf(soil_t_result2, "Quality of soil tmp: %s", soil_temperature_quality);
+    const char air_m_result[32];
+    const char air_t_result[32];
+    sprintf(air_m_result, "Quality of air hum: %s ", air_humidity_quality);
+    sprintf(air_t_result, "Quality of air tmp: %s", air_temperature_quality);
 
-    const char air_m_result2[32];
-    const char air_t_result2[32];
-    sprintf(air_m_result2, "Quality of air hum: %s ", air_humidity_quality);
-    sprintf(air_t_result2, "Quality of air tmp: %s", air_temperature_quality);
-
-    const char light_display2[32];
-    sprintf(light_display2, "Quality of light lvl: %s", light_quality);
+    const char light_display[32];
+    sprintf(light_display, "Quality of light lvl: %s", light_quality);
+    
+    ssd1306_display_text(dev, 2, soil_m_result, strlen(soil_m_result), false);
+    ssd1306_display_text(dev, 3, soil_t_result, strlen(soil_t_result), false);
+    ssd1306_display_text(dev, 4, air_m_result, strlen(air_t_result), false);
+    ssd1306_display_text(dev, 5, air_t_result, strlen(air_m_result), false);
+    ssd1306_display_text(dev, 6, light_display, strlen(light_display), false);
 
     char *str = malloc(40 * sizeof(char)); // Allocate memory
     if (str == NULL)
