@@ -955,6 +955,134 @@ char *display_all(SSD1306_t *dev)
     return str;
 }
 
+char *display_all2(SSD1306_t *dev) {
+    #include <string.h>
+
+    const char light_quality[32];
+    const char air_humidity_quality[32];
+    const char air_temperature_quality[32];
+    const char soil_moisture_quality[32];
+    const char soil_temperature_quality[32];
+
+    int moisture_result;
+    float temperature_result;
+    stemma_soil(&moisture_result, &temperature_result);
+
+    float temp;
+    int hum;
+    temperaure_humidity(&temp, &hum);
+
+    int light_result;
+    light_adc(&light_result);
+
+    int badCondition = 0;
+
+    if (moisture_result < 50)
+    {
+        badCondition = 1;
+        strcpy(soil_moisture_quality, "Too dry");
+    }
+    else if (moisture_result > 200)
+    {
+        badCondition = 1;
+        strcpy(soil_moisture_quality, "Too wet");
+    }
+    else
+    {
+        strcpy(soil_moisture_quality, "Good");
+    }
+
+    if (temperature_result < 12)
+    {
+        badCondition = 1;
+        strcpy(soil_temperature_quality, "Too cold");
+    }
+    else if (temperature_result > 27)
+    {
+        badCondition = 1;
+        strcpy(soil_temperature_quality, "Too hot");
+    }
+    else
+    {
+        strcpy(soil_temperature_quality, "Good");
+    }
+
+    if (hum < 10)
+    {
+        badCondition = 1;
+        strcpy(air_humidity_quality, "Too dry");
+    }
+    else if (hum > 30)
+    {
+        badCondition = 1;
+        strcpy(air_humidity_quality, "Too wet");
+    }
+    else
+    {
+        strcpy(air_humidity_quality, "Good");
+    }
+
+    if (light_result < 100)
+    {
+        strcpy(light_quality, "Dark");
+    }
+    else if (light_result < 250)
+    {
+        strcpy(light_quality, "Dim");
+    }
+    else if (light_result < 600)
+    {
+        strcpy(light_quality, "Light");
+    }
+    else if (light_result < 900)
+    {
+        strcpy(light_quality, "Bright");
+    }
+    else
+    {
+        strcpy(light_quality, "Very bright");
+    }
+
+    if (badCondition == 1)
+    {
+        gpio_set_level(RED_LED_GPIO, 1);
+    }
+    else
+    {
+        gpio_set_level(RED_LED_GPIO, 0);
+    }
+
+
+    ssd1306_display_text(dev, 2, soil_m_result2, strlen(soil_m_result2), false);
+    ssd1306_display_text(dev, 3, soil_t_result2, strlen(soil_t_result2), false);
+    ssd1306_display_text(dev, 4, air_m_result2, strlen(air_t_result2), false);
+    ssd1306_display_text(dev, 5, air_t_result2, strlen(air_m_result2), false);
+    ssd1306_display_text(dev, 6, light_display2, strlen(light_display2), false);
+
+    const char soil_m_result2[32];
+    const char soil_t_result2[32];
+    sprintf(soil_m_result2, "Quality of soil mois: %s", soil_moisture_quality);
+    sprintf(soil_t_result2, "Quality of soil tmp: %s", soil_temperature_quality);
+
+    const char air_m_result2[32];
+    const char air_t_result2[32];
+    sprintf(air_m_result2, "Quality of air hum: %s ", air_humidity_quality);
+    sprintf(air_t_result2, "Quality of air tmp: %s", air_temperature_quality);
+
+    const char light_display2[32];
+    sprintf(light_display2, "Quality of light lvl: %s", light_quality);
+
+    char *str = malloc(40 * sizeof(char)); // Allocate memory
+    if (str == NULL)
+    {
+        // Handle allocation failure
+        exit(1);
+    }
+
+    sprintf(str, "\n%s, %s, %s, %s, %s\n", soil_moisture_quality, soil_temperature_quality, air_humidity_quality, air_temperature_quality, light_quality);
+    return str;
+}
+
 void fileread(char *str)
 {
 
@@ -1159,3 +1287,16 @@ void app_main(void)
     button_switch(&dev);
     // esp_restart();
 }
+
+    char soil_m_result2[32];
+    char soil_t_result2[32];
+    sprintf(soil_m_result2, "Quality of soil mois: %s", soil_moisture_quality);
+    sprintf(soil_t_result2, "Quality of soil tmp: %s", soil_temperature_quality);
+
+    char air_m_result2[32];
+    char air_t_result2[32];
+    sprintf(air_m_result2, "Quality of air hum: %s ", air_humidity_quality);
+    sprintf(air_t_result2, "Quality of air tmp: %s", air_temperature_quality);
+
+    char light_display2[32];
+    sprintf(light_display2, "Quality of light lvl: %s", light_quality);
