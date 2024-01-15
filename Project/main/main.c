@@ -735,6 +735,14 @@ void button_switch(SSD1306_t *dev)
 }
 
 
+void gpio_interrupt_handler_1(void *args)
+{
+    btn1 = 1;
+}
+void gpio_interrupt_handler_2(void *args)
+{
+    btn2 = 1;
+}
 void button(gpio_num_t GPIO)
 {
 
