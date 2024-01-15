@@ -1035,7 +1035,7 @@ void button_switch(SSD1306_t *dev)
             sprintf(currentProgram, "%d. %s", switchState + 1, programRunning[switchState]);
 
             display_menu(dev, currentProgram);
-            printf("Program : %s \t|\n", currentProgram);
+            printf("Program : %s \t|", currentProgram);
         }
         else if (btn2)
         {
@@ -1087,7 +1087,7 @@ void button_switch(SSD1306_t *dev)
 
                 break;
             case 1:
-
+                display_all2(dev);
                 break;
             case 2:
                 buzzer_demo();
@@ -1097,11 +1097,11 @@ void button_switch(SSD1306_t *dev)
                 break;
             }
         }
-        else
-        {
-            printf("waiting\n");
-            vTaskDelay(500);
-        }
+    }
+    else
+    {
+        printf("waiting\n");
+        vTaskDelay(500);
     }
 }
 
