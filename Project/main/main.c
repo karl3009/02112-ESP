@@ -36,7 +36,7 @@
 
 #define tag "EXAMPLE_ALL"
 
-#define RED_LED_GPIO 8
+#define RED_LED_GPIO 9
 #define BUTTON_1_GPIO_PIN 18
 #define BUTTON_2_GPIO_PIN 19
 
@@ -674,7 +674,7 @@ char *display_all(SSD1306_t *dev)
         badCondition = 1;
         strcpy(soil_moisture_quality, "Too dry");
     }
-    else if (moisture_result > 200)
+    else if (moisture_result > 350)
     {
         badCondition = 1;
         strcpy(soil_moisture_quality, "Too wet");
@@ -737,10 +737,12 @@ char *display_all(SSD1306_t *dev)
 
     if (badCondition == 1)
     {
+        printf("\nLight: %s, Soil M : %s, Soil T: %s, Air T: %s, Air H: %s\n", light_quality,soil_moisture_quality,soil_temperature_quality,air_temperature_quality,air_humidity_quality);
         gpio_set_level(RED_LED_GPIO, 1);
     }
     else
     {
+        printf("\nLight: %s, Soil M : %s, Soil T: %s, Air T: %s, Air H: %s\n", light_quality,soil_moisture_quality,soil_temperature_quality,air_temperature_quality,air_humidity_quality);
         gpio_set_level(RED_LED_GPIO, 0);
     }
 
@@ -966,6 +968,17 @@ void app_main(void)
     SSD1306_t dev;
 
     initDisplay(&dev);
+
+
+
+    gpio_config_t io_conf;
+    // Configure RED LED GPIO
+    io_conf.pin_bit_mask = (1ULL << RED_LED_GPIO);
+    io_conf.mode = GPIO_MODE_OUTPUT;
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    gpio_config(&io_conf);
+
+    
 
     // Buttons
     button(BUTTON_1_GPIO_PIN);
