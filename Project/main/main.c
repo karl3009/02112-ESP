@@ -483,6 +483,84 @@ void buzzer_demo()
     // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(BUZZ_MODE, BUZZ_CHANNEL));
 
+    // Now the initialization is done
+    ESP_LOGI(tag, "Initialization complete. Playing 7 * 2 tones. First part slow, second part fast");
+
+    // Set duty
+    ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 50 * 4095 / 100)); // 50% duty //Can change 4096 to different sound qualities like "3*4096/4" which gives 75%
+    // Update duty to apply the new value
+    ESP_ERROR_CHECK(ledc_update_duty(BUZZ_MODE, BUZZ_CHANNEL));
+    // 1000 ms delay
+    ESP_LOGI(tag, "Playing 1000 Hz.");
+    vTaskDelay((1000) / portTICK_PERIOD_MS);
+    // Playing frequency:
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 523.25)); // 50% duty
+    ESP_LOGI(tag, "Playing C5 - 523.25 Hz.");
+    vTaskDelay((250) / portTICK_PERIOD_MS);
+    
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 587.33)); // 50% duty
+    ESP_LOGI(tag, "Playing D5 - 587.33 Hz.");
+    vTaskDelay((300) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 659.26)); // 50% duty
+    ESP_LOGI(tag, "Playing E5 - 659.26 Hz.");
+    vTaskDelay((250) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 698.46)); // 50% duty
+    ESP_LOGI(tag, "Playing F5 - 698.46 Hz.");
+    vTaskDelay((350) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 783.99)); // 50% duty
+    ESP_LOGI(tag, "Playing G5 - 783.99 Hz.");
+    vTaskDelay((300) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 880.00)); // 50% duty 
+    ESP_LOGI(tag, "Playing A5 - 880.00 Hz.");
+    vTaskDelay((200) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 987.77)); // 50% duty 
+    ESP_LOGI(tag, "Playing B5 - 987.77 Hz.");
+    vTaskDelay((1000) / portTICK_PERIOD_MS);
+
+    ESP_LOGI(tag, "Now we come to the fast part.");
+    //Second wave of music coming right here, but now faster.
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 523.25)); // 50% duty
+    ESP_LOGI(tag, "Playing C5 - 523.25 Hz.");
+    vTaskDelay((100) / portTICK_PERIOD_MS);
+    
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 587.33)); // 50% duty
+    ESP_LOGI(tag, "Playing D5 - 587.33 Hz.");
+    vTaskDelay((125) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 659.26)); // 50% duty
+    ESP_LOGI(tag, "Playing E5 - 659.26 Hz.");
+    vTaskDelay((75) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 698.46)); // 50% duty
+    ESP_LOGI(tag, "Playing F5 - 698.46 Hz.");
+    vTaskDelay((100) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 783.99)); // 50% duty
+    ESP_LOGI(tag, "Playing G5 - 783.99 Hz.");
+    vTaskDelay((125) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 880.00)); // 50% duty
+    ESP_LOGI(tag, "Playing A5 - 880.00 Hz.");
+    vTaskDelay((90) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 987.77)); // 50% duty
+    ESP_LOGI(tag, "Playing B5 - 987.77 Hz.");
+    vTaskDelay((150) / portTICK_PERIOD_MS);
+
+    // Turning buzzer off here
+    vTaskDelay((400 / portTICK_PERIOD_MS));
+    ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 0)); // 0% duty
+    ESP_ERROR_CHECK(ledc_update_duty(BUZZ_MODE, BUZZ_CHANNEL));
+    ESP_LOGI(tag, "Buzzer is now off.");
+}
+
+/*
     ESP_LOGI(tag, "Rick Astley - Never Gonna Give You Up");
 
     // Define note frequencies and durations for the chorus of "Never Gonna Give You Up"
@@ -500,8 +578,9 @@ void buzzer_demo()
     // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(BUZZ_MODE, BUZZ_CHANNEL));
 
-    ESP_LOGI(tag, "Rick Astley - Never Gonna Give You Up - Finished");
-}
+    ESP_LOGI(tag, "Rick Astley - Never Gonna Give You Up - Finished"); 
+
+} */
 void gpio_demo()
 {
     gpio_config_t io_conf;
@@ -664,7 +743,6 @@ char *display_all(SSD1306_t *dev)
     temperaure_humidity(&temp, &hum);
 
     int light_result;
-
     light_adc(&light_result);
 
     int badCondition = 0;
