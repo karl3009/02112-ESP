@@ -648,6 +648,7 @@ void initDisplay(SSD1306_t *dev)
 
 char *display_all(SSD1306_t *dev)
 {
+#include <string.h>
 
     const char light_quality[32];
     const char air_humidity_quality[32];
@@ -667,76 +668,71 @@ char *display_all(SSD1306_t *dev)
     light_adc(&light_result);
 
     int badCondition = 0;
+
     if (moisture_result < 50)
     {
         badCondition = 1;
-        soil_moisture_quality = "Too dry";
-        // too dry
+        strcpy(soil_moisture_quality, "Too dry");
     }
     else if (moisture_result > 200)
     {
         badCondition = 1;
-        soil_moisture_quality = "Too wet";
-        // too wet
+        strcpy(soil_moisture_quality, "Too wet");
     }
     else
     {
-        soil_moisture_quality = "Good";
+        strcpy(soil_moisture_quality, "Good");
     }
 
     if (temperature_result < 12)
     {
         badCondition = 1;
-        soil_temperature_quality = "Too cold";
-        // too cold
+        strcpy(soil_temperature_quality, "Too cold");
     }
     else if (temperature_result > 27)
     {
         badCondition = 1;
-        soil_temperature_quality = "Too hot";
-        // too hot
+        strcpy(soil_temperature_quality, "Too hot");
     }
     else
     {
-        soil_temperature_quality = "Good";
+        strcpy(soil_temperature_quality, "Good");
     }
 
     if (hum < 10)
     {
         badCondition = 1;
-        air_humidity_quality = "Too dry";
-        // too dry
+        strcpy(air_humidity_quality, "Too dry");
     }
     else if (hum > 30)
     {
         badCondition = 1;
-        air_humidity_quality = "Too wet";
-        // too wet
+        strcpy(air_humidity_quality, "Too wet");
     }
     else
     {
-        air_humidity_quality = "Good";
+        strcpy(air_humidity_quality, "Good");
     }
 
     if (light_result < 100)
     {
-        light_quality = "Dark";
+        strcpy(light_quality, "Dark");
     }
     else if (light_result < 250)
     {
-        light_quality = "Dim";
+        strcpy(light_quality, "Dim");
     }
     else if (light_result < 600)
     {
-        light_quality = "Light";
+        strcpy(light_quality, "Light");
     }
     else if (light_result < 900)
     {
-        light_quality = "Bright";
+        strcpy(light_quality, "Bright");
     }
     else
     {
-        light_quality = "Very bright";
+        strcpy(light_quality, "Very bright");
     }
 
     if (badCondition == 1)
