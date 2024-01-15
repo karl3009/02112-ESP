@@ -373,6 +373,75 @@ void stemma_soil_demo()
     }
 }
 
+void rgb(int soil_m_bad, int soil_t_bad, int air_h_bad, int air_t_bad, int good_condition)
+{
+    int red_duty = 0;
+    int green_duty = 0;
+    int blue_duty = 0;
+
+    if (soil_m_bad == 1 || air_h_bad == 1)
+    {
+        red_duty = 8192;
+    }
+    if (soil_t_bad == 1 || air_t_bad == 1)
+    {
+        blue_duty = 8192;
+    }
+    if (good_condition == 1)
+    {
+        green_duty = 8192;
+        red_duty = 0;
+        blue_duty = 0;
+    }
+
+    ledc_timer_config_t ledc_timer = {
+        .speed_mode = LEDC_MODE,
+        .duty_resolution = LEDC_DUTY_RES,
+        .timer_num = LEDC_TIMER,
+        .freq_hz = LEDC_FREQUENCY, // Set output frequency at 1 kHz
+        .clk_cfg = LEDC_AUTO_CLK};
+    ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
+
+    // Prepare and then apply the LEDC PWM channel configuration
+    ledc_channel_config_t ledc_channel_red = {
+        .speed_mode = LEDC_MODE,
+        .channel = LEDC_CHANNEL_RED,
+        .timer_sel = LEDC_TIMER,
+        .intr_type = LEDC_INTR_DISABLE,
+        .gpio_num = LEDC_OUTPUT_IO_RED,
+        .duty = red_duty, // Set duty to 0%
+        .hpoint = 0};
+    ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel_red));
+
+    ledc_channel_config_t ledc_channel_green = {
+        .speed_mode = LEDC_MODE,
+        .channel = LEDC_CHANNEL_GREEN,
+        .timer_sel = LEDC_TIMER,
+        .intr_type = LEDC_INTR_DISABLE,
+        .gpio_num = LEDC_OUTPUT_IO_GREEN,
+        .duty = 0, // Set duty to 0%
+        .hpoint = 0};
+    ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel_green));
+
+    ledc_channel_config_t ledc_channel_blue = {
+        .speed_mode = LEDC_MODE,
+        .channel = LEDC_CHANNEL_BLUE,
+        .timer_sel = LEDC_TIMER,
+        .intr_type = LEDC_INTR_DISABLE,
+        .gpio_num = LEDC_OUTPUT_IO_BLUE,
+        .duty = 0, // Set duty to 0%
+        .hpoint = 0};
+    ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel_blue));
+
+    // Now the initialization is done
+    ESP_LOGI(tag, "start color.");
+    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL_RED, red_duty));
+    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL_GREEN, green_duty));
+    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL_BLUE, blue_duty));
+
+    // 1000 ms delay
+}
+
 void led_fade_demo()
 {
     // Prepare and then apply the LEDC PWM timer configuration (one time can drive multiple channels)
@@ -728,6 +797,10 @@ void initDisplay(SSD1306_t *dev)
 char *display_all(SSD1306_t *dev)
 {
 #include <string.h>
+    int soil_m_bad = 0;
+    int soil_t_bad = 0;
+    int air_t_bad = 0;
+    int air_h_bad = 0;
 
     const char light_quality[32];
     const char air_humidity_quality[32];
@@ -751,11 +824,13 @@ char *display_all(SSD1306_t *dev)
     {
         badCondition = 1;
         strcpy(soil_moisture_quality, "Too dry");
+        soil_m_bad = 1;
     }
     else if (moisture_result > 350)
     {
         badCondition = 1;
         strcpy(soil_moisture_quality, "Too wet");
+        soil_m_bad = 1;
     }
     else
     {
@@ -766,11 +841,13 @@ char *display_all(SSD1306_t *dev)
     {
         badCondition = 1;
         strcpy(soil_temperature_quality, "Too cold");
+        soil_t_bad = 1;
     }
-    else if (temperature_result > 27)
+    else if (temperature_result > 30)
     {
         badCondition = 1;
         strcpy(soil_temperature_quality, "Too hot");
+        soil_t_bad = 1;
     }
     else
     {
@@ -781,11 +858,13 @@ char *display_all(SSD1306_t *dev)
     {
         badCondition = 1;
         strcpy(air_humidity_quality, "Too dry");
+        air_h_bad = 1;
     }
     else if (hum > 35)
     {
         badCondition = 1;
         strcpy(air_humidity_quality, "Too wet");
+        air_h_bad = 1;
     }
     else
     {
@@ -796,11 +875,13 @@ char *display_all(SSD1306_t *dev)
     {
         badCondition = 1;
         strcpy(air_temperature_quality, "Too cold");
+        air_t_bad = 1;
     }
     else if (temp > 30)
     {
         badCondition = 1;
         strcpy(air_temperature_quality, "Too hot");
+        air_t_bad = 1;
     }
     else
     {
@@ -832,12 +913,14 @@ char *display_all(SSD1306_t *dev)
     {
         printf("\nLight: %s, Soil M : %s, Soil T: %s, Air T: %s, Air H: %s\n", light_quality, soil_moisture_quality, soil_temperature_quality, air_temperature_quality, air_humidity_quality);
         gpio_set_level(RED_LED_GPIO, 1);
+        rgb(soil_m_bad, soil_t_bad, air_h_bad, air_t_bad, 0);
         buzzer_demo();
     }
     else
     {
         printf("\nLight: %s, Soil M : %s, Soil T: %s, Air T: %s, Air H: %s\n", light_quality, soil_moisture_quality, soil_temperature_quality, air_temperature_quality, air_humidity_quality);
         gpio_set_level(RED_LED_GPIO, 0);
+        rgb(0, 0, 0, 0, 1);
     }
 
     // int center, top; //, bottom;
