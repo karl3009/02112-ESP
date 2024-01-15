@@ -113,32 +113,6 @@ void display_menu(SSD1306_t *dev, const char *message)
     vTaskDelay(20 / portTICK_PERIOD_MS);
 }
 
-    // // Horizontal Scroll
-    // ESP_LOGI(tag, "Horizontal scrolling.");
-    // ssd1306_clear_screen(&dev, false);
-    // ssd1306_contrast(&dev, 0xff);
-    // ssd1306_display_text(&dev, center, "Horizontal", 10, false);
-    // ssd1306_hardware_scroll(&dev, SCROLL_RIGHT);
-    // vTaskDelay(3000 / portTICK_PERIOD_MS);
-    // ssd1306_hardware_scroll(&dev, SCROLL_LEFT);
-    // vTaskDelay(3000 / portTICK_PERIOD_MS);
-    // ssd1306_hardware_scroll(&dev, SCROLL_STOP);
-    // // Vertical Scroll
-    // ESP_LOGI(tag, "Vertical scrolling.");
-    // ssd1306_clear_screen(&dev, false);
-    // ssd1306_contrast(&dev, 0xff);
-    // ssd1306_display_text(&dev, center, "Vertical", 8, false);
-    // ssd1306_hardware_scroll(&dev, SCROLL_DOWN);
-    // vTaskDelay(3000 / portTICK_PERIOD_MS);
-    // ssd1306_hardware_scroll(&dev, SCROLL_UP);
-    // vTaskDelay(3000 / portTICK_PERIOD_MS);
-    // ssd1306_hardware_scroll(&dev, SCROLL_STOP);
-    // // Invert
-    // ESP_LOGI(tag, "Invert colours.");
-    // ssd1306_clear_screen(&dev, true);
-    // ssd1306_contrast(&dev, 0xff);
-    // ssd1306_display_text(&dev, center, "  Good Bye!!", 12, true);
-
 void temperaure_humidity(float *temp, int *hum)
 {
     i2c_dev_t dev = {0};
@@ -588,17 +562,15 @@ char *display_all2(SSD1306_t *dev) {
     sprintf(str, "\n%s, %s, %s, %s, %s\n", soil_moisture_quality, soil_temperature_quality, air_humidity_quality, air_temperature_quality, light_quality);
     return str;
 }
-
-void fileread(char *str)
+void initfileread()
 {
-
+    ESP_LOGI(TAG, "Initializing SPIFFS");
     esp_vfs_spiffs_conf_t config = {
         .base_path = "/storage",
         .partition_label = NULL,
         .max_files = 5,
         .format_if_mount_failed = true};
     esp_err_t result = esp_vfs_spiffs_register(&config);
-
     if (result != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(result));
@@ -615,33 +587,96 @@ void fileread(char *str)
     {
         ESP_LOGI(TAG, "Partition size: total: %d, used: %d", total, used);
     }
+}
+
+void write_to_file(char *str)
+{
+    ESP_LOGI(TAG, "Writing to myfile.txt");
 
     FILE *f = fopen("/storage/myfile.txt", "w");
     if (f == NULL)
     {
-        ESP_LOGE(TAG, "Failed to open file for writing");
+        ESP_LOGE(TAG, "Failed to open myfile.txt for writing");
         return;
     }
-    fprintf(f, "%s", str);
-    fclose(f);
-    ESP_LOGI(TAG, "File written");
+    fprintf(f, "%s", str); // Use fprintf to write the string to the file
+    fclose(f);             // Close the file pointer f, not stdout
+}
 
-    f = fopen("/storage/myfile.txt", "r");
-    if (f == NULL)
+int read_to_file()
+{
+    FILE *fp = fopen("/storage/myfile.txt", "r");
+    if (fp == NULL)
     {
-        ESP_LOGE(TAG, "Failed to open file for writing");
-        return;
+        ESP_LOGE(TAG, "Failed to open myfile.txt for reading");
+        return -1; // Indicate failure to open file
     }
 
-    char line[64];
-    printf("Read from file: '");
-    while (fgets(line, sizeof(line), f) != NULL)
+    int c;
+    while ((c = fgetc(fp)) != EOF) // Read character and check for EOF in one step
     {
-        printf("%s", line);
+        printf("%c", c);
     }
-    printf("'\n");
 
-    fclose(f);
+    fclose(fp);
+    return 0; // Indicate success
+}
+
+char *sensor_data()
+{
+    static char data_str[128];
+    int moisture_result;
+    float temperature_result;
+    stemma_soil(&moisture_result, &temperature_result);
+
+    float temp;
+    int hum;
+    temperaure_humidity(&temp, &hum);
+
+    int light_result;
+    light_adc(&light_result);
+
+    snprintf(data_str, sizeof(data_str), "%d, %.1f, %d, %.1f, %d\n",
+             moisture_result, temperature_result, hum, temp, light_result);
+    return data_str;
+}
+
+char *data_write(int cycles)
+{
+    int totalLength = 0;
+    char *all_data = malloc(1); // Start with an allocated empty string
+    if (!all_data)
+        return NULL; // Check for allocation failure
+
+    all_data[0] = '\0'; // Initialize the string to be empty
+
+    if (cycles == 0)
+    {
+        return NULL;
+    }
+    else
+    {
+        for (int i = 0; i < cycles; i++)
+        {
+            char *tempStr = sensor_data();
+            if (tempStr != NULL)
+            {
+                totalLength += strlen(tempStr);
+                char *new_all_data = realloc(all_data, totalLength + 1); // +1 for null-terminator
+                if (new_all_data == NULL)
+                {
+                    ESP_LOGE(TAG, "Memory reallocation failed for all_data");
+                    free(all_data);
+                    return NULL;
+                }
+                all_data = new_all_data;
+                strcat(all_data, tempStr); // Concatenate tempStr to all_data
+            }
+            vTaskDelay(pdMS_TO_TICKS(10000)); // Delay for 10 seconds
+        }
+    }
+
+    return all_data;
 }
 
 void button_switch(SSD1306_t *dev)
@@ -672,13 +707,22 @@ void button_switch(SSD1306_t *dev)
                 display_all(dev);
                 break;
             case 1:
-                //buzzer_demo();
-                break;
-            case 2:
+                // Start data logging for a specified duration
+                char *sensorDataString = data_write(10);
+                if (sensorDataString != NULL)
+                {
+                    write_to_file(sensorDataString);
+                    free(sensorDataString); // Free the allocated memory
+                }
 
                 break;
+
+            case 2:
+                read_to_file(); // Implement this function to read and display the logged data
+                break;
             case 3:
-                //stemma_soil_demo();
+                data_write(0);
+                // stemma_soil_demo();
                 break;
             }
         }
@@ -688,15 +732,6 @@ void button_switch(SSD1306_t *dev)
             vTaskDelay(500);
         }
     }
-}
-
-void gpio_interrupt_handler_1(void *args)
-{
-    btn1 = 1;
-}
-void gpio_interrupt_handler_2(void *args)
-{
-    btn2 = 1;
 }
 
 
