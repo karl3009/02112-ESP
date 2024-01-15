@@ -565,61 +565,77 @@ void buzzer_demo()
 
     ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 523.25)); // 50% duty
     ESP_LOGI(tag, "Playing C5 - 523.25 Hz.");
-    vTaskDelay((250) / portTICK_PERIOD_MS);
-
+    vTaskDelay((200) / portTICK_PERIOD_MS);
+    
     ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 587.33)); // 50% duty
     ESP_LOGI(tag, "Playing D5 - 587.33 Hz.");
-    vTaskDelay((300) / portTICK_PERIOD_MS);
+    vTaskDelay((250) / portTICK_PERIOD_MS);
 
     ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 659.26)); // 50% duty
     ESP_LOGI(tag, "Playing E5 - 659.26 Hz.");
-    vTaskDelay((250) / portTICK_PERIOD_MS);
+    vTaskDelay((200) / portTICK_PERIOD_MS);
 
     ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 698.46)); // 50% duty
     ESP_LOGI(tag, "Playing F5 - 698.46 Hz.");
-    vTaskDelay((350) / portTICK_PERIOD_MS);
+    vTaskDelay((275) / portTICK_PERIOD_MS);
 
     ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 783.99)); // 50% duty
     ESP_LOGI(tag, "Playing G5 - 783.99 Hz.");
-    vTaskDelay((300) / portTICK_PERIOD_MS);
+    vTaskDelay((225) / portTICK_PERIOD_MS);
 
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 880.00)); // 50% duty
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 880.00)); // 50% duty 
     ESP_LOGI(tag, "Playing A5 - 880.00 Hz.");
-    vTaskDelay((200) / portTICK_PERIOD_MS);
+    vTaskDelay((150) / portTICK_PERIOD_MS);
 
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 987.77)); // 50% duty
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 987.77)); // 50% duty 
     ESP_LOGI(tag, "Playing B5 - 987.77 Hz.");
-    vTaskDelay((1000) / portTICK_PERIOD_MS);
+    vTaskDelay((800) / portTICK_PERIOD_MS);
 
     ESP_LOGI(tag, "Now we come to the fast part.");
-    // Second wave of music coming right here, but now faster.
+    //Second wave of music coming right here, but now faster.
     ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 523.25)); // 50% duty
     ESP_LOGI(tag, "Playing C5 - 523.25 Hz.");
-    vTaskDelay((100) / portTICK_PERIOD_MS);
-
+    vTaskDelay((75) / portTICK_PERIOD_MS);
+    
     ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 587.33)); // 50% duty
     ESP_LOGI(tag, "Playing D5 - 587.33 Hz.");
-    vTaskDelay((125) / portTICK_PERIOD_MS);
+    vTaskDelay((100) / portTICK_PERIOD_MS);
 
     ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 659.26)); // 50% duty
     ESP_LOGI(tag, "Playing E5 - 659.26 Hz.");
+    vTaskDelay((125) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 698.46)); // 50% duty
+    ESP_LOGI(tag, "Playing F5 - 698.46 Hz.");
+    vTaskDelay((100) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 783.99)); // 50% duty
+    ESP_LOGI(tag, "Playing G5 - 783.99 Hz.");
+    vTaskDelay((125) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 880.00)); // 50% duty
+    ESP_LOGI(tag, "Playing A5 - 880.00 Hz.");
+    vTaskDelay((100) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 987.77)); // 50% duty
+    ESP_LOGI(tag, "Playing B5 - 987.77 Hz.");
+    vTaskDelay((125) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 880.00)); // 50% duty
+    ESP_LOGI(tag, "Playing A5 - 880.00 Hz.");
+    vTaskDelay((100) / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 783.99)); // 50% duty
+    ESP_LOGI(tag, "Playing G5 - 783.99 Hz.");
     vTaskDelay((75) / portTICK_PERIOD_MS);
 
     ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 698.46)); // 50% duty
     ESP_LOGI(tag, "Playing F5 - 698.46 Hz.");
-    vTaskDelay((100) / portTICK_PERIOD_MS);
+    vTaskDelay((50) / portTICK_PERIOD_MS);
 
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 783.99)); // 50% duty
-    ESP_LOGI(tag, "Playing G5 - 783.99 Hz.");
-    vTaskDelay((125) / portTICK_PERIOD_MS);
-
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 880.00)); // 50% duty
-    ESP_LOGI(tag, "Playing A5 - 880.00 Hz.");
-    vTaskDelay((90) / portTICK_PERIOD_MS);
-
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 987.77)); // 50% duty
-    ESP_LOGI(tag, "Playing B5 - 987.77 Hz.");
-    vTaskDelay((150) / portTICK_PERIOD_MS);
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 659.26)); // 50% duty
+    ESP_LOGI(tag, "Playing E5 - 659.26 Hz.");
+    vTaskDelay((25) / portTICK_PERIOD_MS);
 
     // Turning buzzer off here
     vTaskDelay((400 / portTICK_PERIOD_MS));
