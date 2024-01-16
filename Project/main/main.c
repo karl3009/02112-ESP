@@ -422,7 +422,7 @@ void thresholder()
 
 void display_values(SSD1306_t *dev)
 {
-    receive_data();
+    // receive_data();
     char soil_m_result[32];
     char soil_t_result[32];
     sprintf(soil_m_result, "Gnd Mst: %d", moisture_result);
@@ -461,7 +461,7 @@ char *pad_string(char *str, int line_length)
 
 void display_condition(SSD1306_t *dev)
 {
-    receive_data();
+    // receive_data();
     evaluate_conditions();
 
     char soil_m_result[64];
@@ -536,6 +536,11 @@ void write_to_file()
     fclose(f);                                                                                         // Close the file pointer f, not stdout
 }
 
+void stop_write_to_file()
+{
+    start = 0;
+}
+
 void append_to_file(char *str)
 {
     ESP_LOGI(TAG, "Appending to myfile.txt");
@@ -573,56 +578,17 @@ char *sensor_data()
 {
     static char data_str[128];
 
-    receive_data();
-
+    // receive_data();
     snprintf(data_str, sizeof(data_str), "%lld, %d, %.1f, %.1f, %.1f, %d\n",
              currentTime / 100000, moisture_result, temperature_result, hum, temp, light_result);
     return data_str;
-}
-
-char *data_write(int cycles)
-{
-    int totalLength = 0;
-    char *all_data = malloc(1); // Start with an allocated empty string
-    if (!all_data)
-        return NULL; // Check for allocation failure
-
-    all_data[0] = '\0'; // Initialize the string to be empty
-
-    if (cycles == 0)
-    {
-        return NULL;
-    }
-    else
-    {
-        for (int i = 0; i < cycles; i++)
-        {
-            char *tempStr = sensor_data();
-            if (tempStr != NULL)
-            {
-                totalLength += strlen(tempStr);
-                char *new_all_data = realloc(all_data, totalLength + 1); // +1 for null-terminator
-                if (new_all_data == NULL)
-                {
-                    ESP_LOGE(TAG, "Memory reallocation failed for all_data");
-                    free(all_data);
-                    return NULL;
-                }
-                all_data = new_all_data;
-                strcat(all_data, tempStr); // Concatenate tempStr to all_data
-            }
-            vTaskDelay(pdMS_TO_TICKS(1000)); // Delay for 10 seconds
-        }
-    }
-
-    return all_data;
 }
 
 void button_switch(SSD1306_t *dev)
 {
     int switchState = 0;
     int lastState = 2;
-    const char *programRunning[] = {"Display values", "Display condi.", "Start Logging", "Display data", "Data write?"}; // Array of strings
+    const char *programRunning[] = {"Display values", "Display condi.", "Start Logging", "Stop Logging", "Data output"}; // Array of strings
     const char currentProgram[32];
 
     sprintf(currentProgram, "%d. %s", switchState + 1, programRunning[switchState]);
@@ -662,7 +628,7 @@ void button_switch(SSD1306_t *dev)
                 break;
             case 3:
                 lastState = 3;
-                read_to_file(); // Implement this function to read and display the logged data
+                stop_write_to_file(); // Stops writing to file
                 break;
             case 4:
                 lastState = 4;
@@ -673,7 +639,16 @@ void button_switch(SSD1306_t *dev)
         }
         else
         {
-            // receive_data();
+         
+            receive_data();
+             currentTime = esp_timer_get_time();
+            if (currentTime > baseTime + 5000000 && start == 1)
+            {
+                baseTime += currentTime - baseTime;
+                printf("Appending\n");
+                append_to_file(sensor_data());
+            }
+            vTaskDelay(50);
             if (switchState == 0)
             {
                 display_values(dev);
@@ -687,14 +662,7 @@ void button_switch(SSD1306_t *dev)
                 printf("waiting\n");
             }
 
-            currentTime = esp_timer_get_time();
-            if (currentTime > baseTime + 5000000 && start == 1)
-            {
-                baseTime += currentTime - baseTime;
-                printf("Appending\n");
-                append_to_file(sensor_data());
-            }
-            vTaskDelay(50);
+           
         }
     }
 }
