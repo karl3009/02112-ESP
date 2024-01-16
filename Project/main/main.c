@@ -483,7 +483,7 @@ char *display_condition(SSD1306_t *dev)
         exit(1);
     }
 
-    sprintf(str, "\n%d, %.1f, %d, %.1f, %d\n", moisture_result, temperature_result, hum, temp, light_result);
+    sprintf(str, "\n%d, %.1f, %1.f, %.1f, %d\n", moisture_result, temperature_result, hum, temp, light_result);
     return str;
 }
 
