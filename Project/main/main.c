@@ -88,6 +88,7 @@ int soil_m_bad = 0;
 int soil_t_bad = 0;
 int air_h_bad = 0;
 int air_t_bad = 0;
+int start = 0;
 int64_t baseTime;
 int64_t currentTime;
 
@@ -402,8 +403,9 @@ void evaluate_conditions()
     strcpy(air_temperature_quality, (air_t_bad == 1) ? "Cold" : (air_t_bad == 2) ? "Hot"
                                                                                  : "Good");
 }
-void thresholder(){
-       if (soil_m_bad || soil_t_bad || air_h_bad || air_t_bad)
+void thresholder()
+{
+    if (soil_m_bad || soil_t_bad || air_h_bad || air_t_bad)
     {
         printf("\nLight: %s, Soil M : %s, Soil T: %s, Air T: %s, Air H: %s\n", light_quality, soil_moisture_quality, soil_temperature_quality, air_temperature_quality, air_humidity_quality);
         gpio_set_level(RED_LED_GPIO, 1);
@@ -439,14 +441,17 @@ void display_values(SSD1306_t *dev)
     ssd1306_display_text(dev, 4, air_m_result, strlen(air_t_result), false);
     ssd1306_display_text(dev, 5, air_t_result, strlen(air_m_result), false);
     ssd1306_display_text(dev, 6, light_display, strlen(light_display), false);
-    
+
     thresholder();
 }
 
-char *pad_string(char *str, int line_length) {
+char *pad_string(char *str, int line_length)
+{
     int len = strlen(str);
-    if (len < line_length) {
-        for (int i = len; i < line_length; i++) {
+    if (len < line_length)
+    {
+        for (int i = len; i < line_length; i++)
+        {
             str[i] = ' '; // Fill the rest of the string with spaces
         }
         str[line_length] = '\0'; // Null-terminate the string
@@ -514,9 +519,12 @@ void initfileread()
     }
 }
 
-void write_to_file(char *str)
+void write_to_file()
 {
+    start = 1;
     ESP_LOGI(TAG, "Writing to myfile.txt");
+
+    // ssd1306_display_text(dev, 2, soil_m_result, strlen(soil_m_result), false);
 
     FILE *f = fopen("/storage/myfile.txt", "w");
     if (f == NULL)
@@ -524,8 +532,22 @@ void write_to_file(char *str)
         ESP_LOGE(TAG, "Failed to open myfile.txt for writing");
         return;
     }
+    fprintf(f, "\nTime, Soil moisture, Soil temperature, Air humidity, Air temperature, Light intensity\n"); // Use fprintf to write the string to the file
+    fclose(f);                                                                                         // Close the file pointer f, not stdout
+}
+
+void append_to_file(char *str)
+{
+    ESP_LOGI(TAG, "Appending to myfile.txt");
+    FILE *f = fopen("/storage/myfile.txt", "a"); // Redirect stdout to the file
+    if (f == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to open myfile.txt for writing");
+        return;
+    }
     fprintf(f, "%s", str); // Use fprintf to write the string to the file
     fclose(f);             // Close the file pointer f, not stdout
+    return;
 }
 
 int read_to_file()
@@ -553,8 +575,8 @@ char *sensor_data()
 
     receive_data();
 
-    snprintf(data_str, sizeof(data_str), "%d, %.1f, %.1f, %.1f, %d\n",
-             moisture_result, temperature_result, hum, temp, light_result);
+    snprintf(data_str, sizeof(data_str), "%lld, %d, %.1f, %.1f, %.1f, %d\n",
+             currentTime / 100000, moisture_result, temperature_result, hum, temp, light_result);
     return data_str;
 }
 
@@ -635,13 +657,8 @@ void button_switch(SSD1306_t *dev)
             case 2:
                 // Start data logging for a specified duration
                 lastState = 2;
-                char *sensorDataString = data_write(10);
-                if (sensorDataString != NULL)
-                {
-                    write_to_file(sensorDataString);
-                    free(sensorDataString); // Free the allocated memory
-                }
-
+                printf("Start data\n");
+                write_to_file(); // Implement this function to write the header to the file
                 break;
             case 3:
                 lastState = 3;
@@ -649,30 +666,33 @@ void button_switch(SSD1306_t *dev)
                 break;
             case 4:
                 lastState = 4;
-                data_write(0);
-                // stemma_soil_demo();
+                read_to_file(); // Implement this function to read and display the logged data
+
                 break;
             }
         }
         else
         {
             // receive_data();
-            if (lastState == 0)
+            if (switchState == 0)
             {
                 display_values(dev);
             }
-            else if (lastState == 1)
+            else if (switchState == 1)
             {
                 display_condition(dev);
             }
-            else{
+            else
+            {
                 printf("waiting\n");
             }
-            
+
             currentTime = esp_timer_get_time();
-            if(currentTime > baseTime+5000000){
-                baseTime += currentTime-baseTime;
-                printf("test\n");
+            if (currentTime > baseTime + 5000000 && start == 1)
+            {
+                baseTime += currentTime - baseTime;
+                printf("Appending\n");
+                append_to_file(sensor_data());
             }
             vTaskDelay(50);
         }
@@ -724,7 +744,7 @@ void app_main(void)
     button(BUTTON_2_GPIO_PIN);
     gpio_isr_handler_add(BUTTON_2_GPIO_PIN, gpio_interrupt_handler_2, (void *)BUTTON_2_GPIO_PIN);
 
-    //time
+    // time
     esp_err_t esp_timer_init();
     baseTime = esp_timer_get_time();
 
