@@ -17,6 +17,7 @@
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "sdkconfig.h"
+#include "esp_timer.h"
 
 // Driver includes
 #include "driver/i2c.h"
@@ -87,6 +88,8 @@ int soil_m_bad = 0;
 int soil_t_bad = 0;
 int air_h_bad = 0;
 int air_t_bad = 0;
+int64_t baseTime;
+int64_t currentTime;
 
 void display_menu(SSD1306_t *dev, const char *message)
 {
@@ -399,6 +402,21 @@ void evaluate_conditions()
     strcpy(air_temperature_quality, (air_t_bad == 1) ? "Cold" : (air_t_bad == 2) ? "Hot"
                                                                                  : "Good");
 }
+void thresholder(){
+       if (soil_m_bad || soil_t_bad || air_h_bad || air_t_bad)
+    {
+        printf("\nLight: %s, Soil M : %s, Soil T: %s, Air T: %s, Air H: %s\n", light_quality, soil_moisture_quality, soil_temperature_quality, air_temperature_quality, air_humidity_quality);
+        gpio_set_level(RED_LED_GPIO, 1);
+        rgb(soil_m_bad, soil_t_bad, air_h_bad, air_t_bad, 0);
+        buzzer();
+    }
+    else
+    {
+        printf("\nLight: %s, Soil M : %s, Soil T: %s, Air T: %s, Air H: %s\n", light_quality, soil_moisture_quality, soil_temperature_quality, air_temperature_quality, air_humidity_quality);
+        gpio_set_level(RED_LED_GPIO, 0);
+        rgb(0, 0, 0, 0, 1);
+    }
+}
 
 void display_values(SSD1306_t *dev)
 {
@@ -421,19 +439,8 @@ void display_values(SSD1306_t *dev)
     ssd1306_display_text(dev, 4, air_m_result, strlen(air_t_result), false);
     ssd1306_display_text(dev, 5, air_t_result, strlen(air_m_result), false);
     ssd1306_display_text(dev, 6, light_display, strlen(light_display), false);
-    if (soil_m_bad || soil_t_bad || air_h_bad || air_t_bad)
-    {
-        printf("\nLight: %s, Soil M : %s, Soil T: %s, Air T: %s, Air H: %s\n", light_quality, soil_moisture_quality, soil_temperature_quality, air_temperature_quality, air_humidity_quality);
-        gpio_set_level(RED_LED_GPIO, 1);
-        rgb(soil_m_bad, soil_t_bad, air_h_bad, air_t_bad, 0);
-        buzzer();
-    }
-    else
-    {
-        printf("\nLight: %s, Soil M : %s, Soil T: %s, Air T: %s, Air H: %s\n", light_quality, soil_moisture_quality, soil_temperature_quality, air_temperature_quality, air_humidity_quality);
-        gpio_set_level(RED_LED_GPIO, 0);
-        rgb(0, 0, 0, 0, 1);
-    }
+    
+    thresholder();
 }
 
 char *pad_string(char *str, int line_length) {
@@ -447,7 +454,7 @@ char *pad_string(char *str, int line_length) {
     return str;
 }
 
-char *display_condition(SSD1306_t *dev)
+void display_condition(SSD1306_t *dev)
 {
     receive_data();
     evaluate_conditions();
@@ -476,15 +483,8 @@ char *display_condition(SSD1306_t *dev)
     ssd1306_display_text(dev, 4, air_m_result, strlen(air_t_result), false);
     ssd1306_display_text(dev, 5, air_t_result, strlen(air_m_result), false);
     ssd1306_display_text(dev, 6, light_display, strlen(light_display), false);
-    char *str = malloc(40 * sizeof(char)); // Allocate memory
-    if (str == NULL)
-    {
-        // Handle allocation failure
-        exit(1);
-    }
 
-    sprintf(str, "\n%d, %.1f, %1.f, %.1f, %d\n", moisture_result, temperature_result, hum, temp, light_result);
-    return str;
+    thresholder();
 }
 
 void initfileread()
@@ -551,11 +551,7 @@ char *sensor_data()
 {
     static char data_str[128];
 
-    soil_sensor(&moisture_result, &temperature_result);
-
-    air_sensor(&temp, &hum);
-
-    light_sensor(&light_result);
+    receive_data();
 
     snprintf(data_str, sizeof(data_str), "%d, %.1f, %.1f, %.1f, %d\n",
              moisture_result, temperature_result, hum, temp, light_result);
@@ -669,11 +665,16 @@ void button_switch(SSD1306_t *dev)
             {
                 display_condition(dev);
             }
-            else
-            {
+            else{
                 printf("waiting\n");
             }
-            vTaskDelay(100);
+            
+            currentTime = esp_timer_get_time();
+            if(currentTime > baseTime+5000000){
+                baseTime += currentTime-baseTime;
+                printf("test\n");
+            }
+            vTaskDelay(50);
         }
     }
 }
@@ -722,6 +723,10 @@ void app_main(void)
     gpio_isr_handler_add(BUTTON_1_GPIO_PIN, gpio_interrupt_handler_1, (void *)BUTTON_1_GPIO_PIN);
     button(BUTTON_2_GPIO_PIN);
     gpio_isr_handler_add(BUTTON_2_GPIO_PIN, gpio_interrupt_handler_2, (void *)BUTTON_2_GPIO_PIN);
+
+    //time
+    esp_err_t esp_timer_init();
+    baseTime = esp_timer_get_time();
 
     // Go to main loop
     button_switch(&dev);
