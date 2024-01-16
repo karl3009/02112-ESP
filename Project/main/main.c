@@ -97,7 +97,7 @@ void display_menu(SSD1306_t *dev, const char *message)
     vTaskDelay(20 / portTICK_PERIOD_MS);
 }
 
-void temperaure_humidity()
+void air_sensor()
 {
     i2c_dev_t dev = {0};
 
@@ -109,7 +109,7 @@ void temperaure_humidity()
     vTaskDelay((500) / portTICK_PERIOD_MS);
 }
 
-void stemma_soil(int *moisture_result, float *temperature_result)
+void soil_sensor(int *moisture_result, float *temperature_result)
 {
     int ret = ESP_OK;
     uint16_t moisture_value = 0;
@@ -138,7 +138,7 @@ void stemma_soil(int *moisture_result, float *temperature_result)
     *temperature_result = temperature_value;
 }
 
-void light_adc(int *light_result)
+void light_sensor(int *light_result)
 {
     // Configuring the ADC
     adc1_config_width(ADC_WIDTH_BIT_12);
@@ -364,9 +364,9 @@ void initDisplay(SSD1306_t *dev)
 
 void receive_data()
 {
-    stemma_soil(&moisture_result, &temperature_result);
-    temperaure_humidity(&temp, &hum);
-    light_adc(&light_result);
+    soil_sensor(&moisture_result, &temperature_result);
+    air_sensor(&temp, &hum);
+    light_sensor(&light_result);
 }
 
 void evaluate_conditions()
@@ -535,11 +535,11 @@ char *sensor_data()
 {
     static char data_str[128];
 
-    stemma_soil(&moisture_result, &temperature_result);
+    soil_sensor(&moisture_result, &temperature_result);
 
-    temperaure_humidity(&temp, &hum);
+    air_sensor(&temp, &hum);
 
-    light_adc(&light_result);
+    light_sensor(&light_result);
 
     snprintf(data_str, sizeof(data_str), "%d, %.1f, %.1f, %.1f, %d\n",
              moisture_result, temperature_result, hum, temp, light_result);
