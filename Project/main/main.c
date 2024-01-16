@@ -66,42 +66,27 @@
 #define BUZZ_DUTY (4096)                // Set duty to 50%. (2 ** 13) * 50% = 4096
 #define BUZZ_FREQUENCY (1000)           // Frequency in Hertz. Set frequency at 1 kHz
 
-// Custom:
-QueueHandle_t interputQueue;
-
+//
 static const char *TAG = "FileSystem";
 
-volatile bool buttonPressed = false;
-
+// button variabels
 int btn1;
 int btn2;
-
-void print_info()
-{
-    /* Print chip information */
-    esp_chip_info_t chip_info;
-    uint32_t flash_size;
-    esp_chip_info(&chip_info);
-    printf("This is %s chip with %d CPU core(s), WiFi%s%s, ",
-           CONFIG_IDF_TARGET,
-           chip_info.cores,
-           (chip_info.features & CHIP_FEATURE_BT) ? "/BT" : "",
-           (chip_info.features & CHIP_FEATURE_BLE) ? "/BLE" : "");
-
-    unsigned major_rev = chip_info.revision / 100;
-    unsigned minor_rev = chip_info.revision % 100;
-    printf("silicon revision v%d.%d, ", major_rev, minor_rev);
-    if (esp_flash_get_size(NULL, &flash_size) != ESP_OK)
-    {
-        printf("Get flash size failed");
-        return;
-    }
-
-    printf("%luMB %s flash\n", flash_size / (1024 * 1024),
-           (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
-
-    printf("Minimum free heap size: %ld bytes\n", esp_get_minimum_free_heap_size());
-}
+// Global variables
+int moisture_result;
+float temperature_result;
+int hum;
+float temp;
+int light_result;
+char light_quality[32];
+char air_humidity_quality[32];
+char air_temperature_quality[32];
+char soil_moisture_quality[32];
+char soil_temperature_quality[32];
+int soil_m_bad = 0;
+int soil_t_bad = 0;
+int air_h_bad = 0;
+int air_t_bad = 0;
 
 void display_menu(SSD1306_t *dev, const char *message)
 {
@@ -156,6 +141,7 @@ void stemma_soil(int *moisture_result, float *temperature_result)
     *moisture_result = moisture_value - 650;
     *temperature_result = temperature_value;
 }
+
 void light_adc(int *light_result)
 {
     // Configuring the ADC
@@ -185,6 +171,7 @@ void init_i2c()
     i2c_param_config(I2C_NUM, &conf);
     ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0));
 }
+
 void rgb(int soil_m_bad, int soil_t_bad, int air_h_bad, int air_t_bad, int good_condition)
 {
     int red_duty = 0;
@@ -252,6 +239,7 @@ void rgb(int soil_m_bad, int soil_t_bad, int air_h_bad, int air_t_bad, int good_
 
     // 1000 ms delay
 }
+
 void buzzer()
 {
     // Prepare and then apply the LEDC PWM timer configuration (we use it for the buzzer)
@@ -378,22 +366,6 @@ void initDisplay(SSD1306_t *dev)
     ssd1306_contrast(dev, 0xff);
 }
 
-// Global variables
-int moisture_result;
-float temperature_result;
-int hum;
-float temp;
-int light_result;
-char light_quality[32];
-char air_humidity_quality[32];
-char air_temperature_quality[32];
-char soil_moisture_quality[32];
-char soil_temperature_quality[32];
-int soil_m_bad = 0;
-int soil_t_bad = 0;
-int air_h_bad = 0;
-int air_t_bad = 0;
-
 void receive_data()
 {
     stemma_soil(&moisture_result, &temperature_result);
@@ -445,7 +417,7 @@ void display_results(SSD1306_t *dev)
     }
 }
 
-char *display_all(SSD1306_t *dev)
+char *display_val(SSD1306_t *dev)
 {
     receive_data();
     evaluate_conditions();
@@ -520,99 +492,10 @@ char *display_all(SSD1306_t *dev)
     return str;
 }
 
-char *display_all2(SSD1306_t *dev)
+char *display_condition(SSD1306_t *dev)
 {
-    int soil_m_bad = 0;
-    int soil_t_bad = 0;
-    int air_t_bad = 0;
-    int air_h_bad = 0;
-
-    const char light_quality[32];
-    const char air_humidity_quality[32];
-    const char air_temperature_quality[32];
-    const char soil_moisture_quality[32];
-    const char soil_temperature_quality[32];
-
-    int moisture_result;
-    float temperature_result;
-    stemma_soil(&moisture_result, &temperature_result);
-
-    float temp;
-    int hum;
-    temperaure_humidity(&temp, &hum);
-
-    int light_result;
-    light_adc(&light_result);
-
-    int badCondition = 0;
-
-    if (moisture_result < 50)
-    {
-        badCondition = 1;
-        strcpy(soil_moisture_quality, "Too dry");
-        soil_m_bad = 1;
-    }
-    else if (moisture_result > 200)
-    {
-        badCondition = 1;
-        strcpy(soil_moisture_quality, "Too wet");
-        soil_m_bad = 1;
-    }
-    else
-    {
-        strcpy(soil_moisture_quality, "Good");
-    }
-
-    if (temperature_result < 12)
-    {
-        badCondition = 1;
-        strcpy(soil_temperature_quality, "Too cold");
-        soil_t_bad = 1;
-    }
-    else if (temperature_result > 27)
-    {
-        badCondition = 1;
-        strcpy(soil_temperature_quality, "Too hot");
-        soil_t_bad = 1;
-    }
-    else
-    {
-        strcpy(soil_temperature_quality, "Good");
-    }
-
-    if (temp < 12)
-    {
-        badCondition = 1;
-        strcpy(air_temperature_quality, "Too cold");
-        air_t_bad = 1;
-    }
-    else if (temp > 30)
-    {
-        badCondition = 1;
-        strcpy(air_temperature_quality, "Too hot");
-        air_t_bad = 1;
-    }
-    else
-    {
-        strcpy(air_temperature_quality, "Good");
-    }
-
-    if (hum < 10)
-    {
-        badCondition = 1;
-        strcpy(air_humidity_quality, "Too dry");
-        air_h_bad = 1;
-    }
-    else if (hum > 30)
-    {
-        badCondition = 1;
-        strcpy(air_humidity_quality, "Too wet");
-        air_h_bad = 1;
-    }
-    else
-    {
-        strcpy(air_humidity_quality, "Good");
-    }
+    receive_data();
+    evaluate_conditions();
 
     if (light_result < 100)
     {
@@ -632,30 +515,57 @@ char *display_all2(SSD1306_t *dev)
     }
     else
     {
-        strcpy(light_quality, "Very bright");
+        strcpy(light_quality, "+Bright");
     }
 
-    if (badCondition == 1)
+    if (soil_m_bad)
     {
-        gpio_set_level(RED_LED_GPIO, 1);
+        strcpy(soil_moisture_quality, "Bad");
     }
     else
     {
-        gpio_set_level(RED_LED_GPIO, 0);
+        strcpy(soil_moisture_quality, "Good");
     }
 
-    const char soil_m_result[64];
-    const char soil_t_result[64];
-    sprintf(soil_m_result, "Quality of soil mois: %s", soil_moisture_quality);
-    sprintf(soil_t_result, "Quality of soil tmp: %s", soil_temperature_quality);
+    if (soil_t_bad)
+    {
+        strcpy(soil_temperature_quality, "Bad");
+    }
+    else
+    {
+        strcpy(soil_temperature_quality, "Good");
+    }
 
-    const char air_m_result[64];
-    const char air_t_result[64];
-    sprintf(air_m_result, "Quality of air hum: %s ", air_humidity_quality);
-    sprintf(air_t_result, "Quality of air tmp: %s", air_temperature_quality);
+    if (air_h_bad)
+    {
+        strcpy(air_humidity_quality, "Bad");
+    }
+    else
+    {
+        strcpy(air_humidity_quality, "Good");
+    }
 
-    const char light_display[64];
-    sprintf(light_display, "Quality of light lvl: %s", light_quality);
+    if (air_t_bad)
+    {
+        strcpy(air_temperature_quality, "Bad");
+    }
+    else
+    {
+        strcpy(air_temperature_quality, "Good");
+    }
+
+    char soil_m_result[64];
+    char soil_t_result[64];
+    sprintf(soil_m_result, "Gnd Mst: %s", soil_moisture_quality);
+    sprintf(soil_t_result, "Gnd Tmp: %s", soil_temperature_quality);
+
+    char air_m_result[64];
+    char air_t_result[64];
+    sprintf(air_m_result, "Air Hum: %s", air_humidity_quality);
+    sprintf(air_t_result, "Air Tmp: %s", air_temperature_quality);
+
+    char light_display[64];
+    sprintf(light_display, "LGT lvl: %s", light_quality);
 
     ssd1306_display_text(dev, 2, soil_m_result, strlen(soil_m_result), false);
     ssd1306_display_text(dev, 3, soil_t_result, strlen(soil_t_result), false);
@@ -663,16 +573,17 @@ char *display_all2(SSD1306_t *dev)
     ssd1306_display_text(dev, 5, air_t_result, strlen(air_m_result), false);
     ssd1306_display_text(dev, 6, light_display, strlen(light_display), false);
 
-    char *str = malloc(200 * sizeof(char)); // Allocate memory
+    char *str = malloc(40 * sizeof(char)); // Allocate memory
     if (str == NULL)
     {
         // Handle allocation failure
         exit(1);
     }
 
-    sprintf(str, "\n%s, %s, %s, %s, %s\n", soil_moisture_quality, soil_temperature_quality, air_humidity_quality, air_temperature_quality, light_quality);
+    sprintf(str, "\n%d, %.1f, %d, %.1f, %d\n", moisture_result, temperature_result, hum, temp, light_result);
     return str;
 }
+
 void initfileread()
 {
     ESP_LOGI(TAG, "Initializing SPIFFS");
@@ -792,17 +703,21 @@ char *data_write(int cycles)
 
 void button_switch(SSD1306_t *dev)
 {
-
     int switchState = 3;
-    const char *programRunning[] = {"Display values", "Display condi.", "Buzzer", "soil"}; // Array of strings
+    int lastState = 2;
+    const char *programRunning[] = {"Display values", "Display condi.", "Start Logging", "Display data", "Data write?"}; // Array of strings
     const char currentProgram[32];
+    
+    sprintf(currentProgram, "%d. %s", switchState + 1, programRunning[switchState]);
+    display_menu(dev, currentProgram);
+    printf("Program : %s \t|", currentProgram);
 
     while (true)
     {
         if (btn1)
         {
             btn1 = 0;
-            switchState = (switchState + 1) % 4; // Cycles through 0, 1, 2, 3
+            switchState = (switchState + 1) % 5;
 
             sprintf(currentProgram, "%d. %s", switchState + 1, programRunning[switchState]);
 
@@ -815,10 +730,16 @@ void button_switch(SSD1306_t *dev)
             switch (switchState)
             {
             case 0:
-                display_all(dev);
+                lastState = 0;
+                display_val(dev);
                 break;
             case 1:
+                lastState = 1;
+                display_condition(dev);
+                break;
+            case 2:
                 // Start data logging for a specified duration
+                lastState = 2;
                 char *sensorDataString = data_write(10);
                 if (sensorDataString != NULL)
                 {
@@ -827,11 +748,12 @@ void button_switch(SSD1306_t *dev)
                 }
 
                 break;
-
-            case 2:
+            case 3:
+                lastState = 3;
                 read_to_file(); // Implement this function to read and display the logged data
                 break;
-            case 3:
+            case 4:
+                lastState = 4;
                 data_write(0);
                 // stemma_soil_demo();
                 break;
@@ -839,8 +761,16 @@ void button_switch(SSD1306_t *dev)
         }
         else
         {
-             receive_data();
-            printf("waiting\n");
+            // receive_data();
+            if(lastState == 0){
+                display_val(dev);
+            }
+            else if(lastState == 1){
+                display_condition(dev);
+            }
+            else{
+                printf("waiting\n");
+            }
             vTaskDelay(100);
         }
     }
@@ -854,6 +784,7 @@ void gpio_interrupt_handler_2(void *args)
 {
     btn2 = 1;
 }
+
 void button(gpio_num_t GPIO)
 {
 
@@ -870,18 +801,14 @@ void button(gpio_num_t GPIO)
 
 void app_main(void)
 {
-
-    printf("\nPrinting device information:\n");
-    print_info();
-
-    init_i2c();
+    // startup
     SSD1306_t dev;
-
+    init_i2c();
     initfileread();
     initDisplay(&dev);
 
+    // Configure RED LED GPIO (make a function maybe)
     gpio_config_t io_conf;
-    // Configure RED LED GPIO
     io_conf.pin_bit_mask = (1ULL << RED_LED_GPIO);
     io_conf.mode = GPIO_MODE_OUTPUT;
     io_conf.intr_type = GPIO_INTR_DISABLE;
@@ -894,6 +821,6 @@ void app_main(void)
     button(BUTTON_2_GPIO_PIN);
     gpio_isr_handler_add(BUTTON_2_GPIO_PIN, gpio_interrupt_handler_2, (void *)BUTTON_2_GPIO_PIN);
 
+    // Go to main loop
     button_switch(&dev);
-    // esp_restart();
 }
