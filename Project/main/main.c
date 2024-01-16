@@ -35,9 +35,9 @@
 
 #define tag "EXAMPLE_ALL"
 
-#define RED_LED_GPIO 8
+#define RED_LED_GPIO 9
 #define BUTTON_1_GPIO_PIN 18
-#define BUTTON_2_GPIO_PIN 19
+#define BUTTON_2_GPIO_PIN 8
 
 #define I2C_MASTER_FREQ_HZ 50000 // Reduce it to 50000 if the temperature/umidity sensor fails
 #define I2C_MASTER_TX_BUF_DISABLE 0
@@ -629,6 +629,7 @@ void button_switch(SSD1306_t *dev)
             case 3:
                 lastState = 3;
                 stop_write_to_file(); // Stops writing to file
+                printf("Stop Write\n");
                 break;
             case 4:
                 lastState = 4;
