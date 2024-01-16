@@ -436,6 +436,17 @@ void display_values(SSD1306_t *dev)
     }
 }
 
+char *pad_string(char *str, int line_length) {
+    int len = strlen(str);
+    if (len < line_length) {
+        for (int i = len; i < line_length; i++) {
+            str[i] = ' '; // Fill the rest of the string with spaces
+        }
+        str[line_length] = '\0'; // Null-terminate the string
+    }
+    return str;
+}
+
 char *display_condition(SSD1306_t *dev)
 {
     receive_data();
@@ -445,21 +456,26 @@ char *display_condition(SSD1306_t *dev)
     char soil_t_result[64];
     sprintf(soil_m_result, "Gnd Mst: %s", soil_moisture_quality);
     sprintf(soil_t_result, "Gnd Tmp: %s", soil_temperature_quality);
+    // Ensure each string fills the entire line
+    pad_string(soil_m_result, 63);
+    pad_string(soil_t_result, 63);
 
     char air_m_result[64];
     char air_t_result[64];
     sprintf(air_m_result, "Air Hum: %s", air_humidity_quality);
     sprintf(air_t_result, "Air Tmp: %s", air_temperature_quality);
+    pad_string(air_m_result, 63);
+    pad_string(air_t_result, 63);
 
     char light_display[64];
     sprintf(light_display, "LGT lvl: %s", light_quality);
+    pad_string(light_display, 63);
 
     ssd1306_display_text(dev, 2, soil_m_result, strlen(soil_m_result), false);
     ssd1306_display_text(dev, 3, soil_t_result, strlen(soil_t_result), false);
     ssd1306_display_text(dev, 4, air_m_result, strlen(air_t_result), false);
     ssd1306_display_text(dev, 5, air_t_result, strlen(air_m_result), false);
     ssd1306_display_text(dev, 6, light_display, strlen(light_display), false);
-
     char *str = malloc(40 * sizeof(char)); // Allocate memory
     if (str == NULL)
     {
@@ -467,7 +483,7 @@ char *display_condition(SSD1306_t *dev)
         exit(1);
     }
 
-    sprintf(str, "\n%d, %.1f, %.1f, %.1f, %d\n", moisture_result, temperature_result, hum, temp, light_result);
+    sprintf(str, "\n%d, %.1f, %d, %.1f, %d\n", moisture_result, temperature_result, hum, temp, light_result);
     return str;
 }
 
