@@ -75,7 +75,7 @@ int btn2;
 // Global variables
 int moisture_result;
 float temperature_result;
-int hum;
+float hum;
 float temp;
 int light_result;
 char light_quality[32];
@@ -97,20 +97,16 @@ void display_menu(SSD1306_t *dev, const char *message)
     vTaskDelay(20 / portTICK_PERIOD_MS);
 }
 
-void temperaure_humidity(float *temp, int *hum)
+void temperaure_humidity()
 {
     i2c_dev_t dev = {0};
 
     // Initialize the sensor (shared i2c) only once after boot.
     ESP_ERROR_CHECK(am2320_shared_i2c_init(&dev, I2C_NUM));
 
-    float temperature, humidity;
-
-    esp_err_t res = am2320_get_rht(&dev, &temperature, &humidity);
+    esp_err_t res = am2320_get_rht(&dev, &temp, &hum);
     // 500 ms delay
     vTaskDelay((500) / portTICK_PERIOD_MS);
-    *temp = temperature;
-    *hum = humidity;
 }
 
 void stemma_soil(int *moisture_result, float *temperature_result)
@@ -538,7 +534,7 @@ int read_to_file()
 char *sensor_data()
 {
     static char data_str[128];
-    
+
     stemma_soil(&moisture_result, &temperature_result);
 
     temperaure_humidity(&temp, &hum);
