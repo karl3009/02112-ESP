@@ -439,85 +439,10 @@ void display_results(SSD1306_t *dev)
     }
 }
 
-char *display_val(SSD1306_t *dev)
-{
-    receive_data();
-    evaluate_conditions();
-
-    display_results(dev);
-
-    char *str = malloc(40 * sizeof(char)); // Allocate memory
-    if (str == NULL)
-    {
-        // Handle allocation failure
-        exit(1);
-    }
-
-    sprintf(str, "\n%d, %.1f, %d, %.1f, %d\n", moisture_result, temperature_result, hum, temp, light_result);
-    return str;
-}
-
 char *display_condition(SSD1306_t *dev)
 {
     receive_data();
     evaluate_conditions();
-
-    if (light_result < 100)
-    {
-        strcpy(light_quality, "Dark");
-    }
-    else if (light_result < 250)
-    {
-        strcpy(light_quality, "Dim");
-    }
-    else if (light_result < 600)
-    {
-        strcpy(light_quality, "Light");
-    }
-    else if (light_result < 900)
-    {
-        strcpy(light_quality, "Bright");
-    }
-    else
-    {
-        strcpy(light_quality, "+Bright");
-    }
-
-    if (soil_m_bad)
-    {
-        strcpy(soil_moisture_quality, "Bad");
-    }
-    else
-    {
-        strcpy(soil_moisture_quality, "Good");
-    }
-
-    if (soil_t_bad)
-    {
-        strcpy(soil_temperature_quality, "Bad");
-    }
-    else
-    {
-        strcpy(soil_temperature_quality, "Good");
-    }
-
-    if (air_h_bad)
-    {
-        strcpy(air_humidity_quality, "Bad");
-    }
-    else
-    {
-        strcpy(air_humidity_quality, "Good");
-    }
-
-    if (air_t_bad)
-    {
-        strcpy(air_temperature_quality, "Bad");
-    }
-    else
-    {
-        strcpy(air_temperature_quality, "Good");
-    }
 
     char soil_m_result[64];
     char soil_t_result[64];
@@ -696,7 +621,7 @@ void button_switch(SSD1306_t *dev)
             {
             case 0:
                 lastState = 0;
-                display_val(dev);
+                display_results(dev);
                 break;
             case 1:
                 lastState = 1;
@@ -729,7 +654,7 @@ void button_switch(SSD1306_t *dev)
             // receive_data();
             if (lastState == 0)
             {
-                display_val(dev);
+                display_results(dev);
             }
             else if (lastState == 1)
             {
