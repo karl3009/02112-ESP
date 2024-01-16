@@ -410,7 +410,7 @@ void display_values(SSD1306_t *dev)
 
     char air_m_result[32];
     char air_t_result[32];
-    sprintf(air_m_result, "Air Hum: %d%%  ", hum);
+    sprintf(air_m_result, "Air Hum: %.1f%%  ", hum);
     sprintf(air_t_result, "Air Tmp: %.1fC", temp);
 
     char light_display[32];
@@ -467,7 +467,7 @@ char *display_condition(SSD1306_t *dev)
         exit(1);
     }
 
-    sprintf(str, "\n%d, %.1f, %d, %.1f, %d\n", moisture_result, temperature_result, hum, temp, light_result);
+    sprintf(str, "\n%d, %.1f, %.1f, %.1f, %d\n", moisture_result, temperature_result, hum, temp, light_result);
     return str;
 }
 
@@ -541,7 +541,7 @@ char *sensor_data()
 
     light_adc(&light_result);
 
-    snprintf(data_str, sizeof(data_str), "%d, %.1f, %d, %.1f, %d\n",
+    snprintf(data_str, sizeof(data_str), "%d, %.1f, %.1f, %.1f, %d\n",
              moisture_result, temperature_result, hum, temp, light_result);
     return data_str;
 }
