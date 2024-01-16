@@ -375,10 +375,32 @@ void receive_data()
 
 void evaluate_conditions()
 {
-    soil_m_bad = (moisture_result < 50 || moisture_result > 350) ? 1 : 0;
-    soil_t_bad = (temperature_result < 12 || temperature_result > 30) ? 1 : 0;
-    air_h_bad = (hum < 10 || hum > 35) ? 1 : 0;
-    air_t_bad = (temp < 12 || temp > 30) ? 1 : 0;
+    air_t_bad = (temp < 10) ? 1 : (temp > 35) ? 2
+                                              : 0;
+    soil_m_bad = (moisture_result < 50) ? 1(moisture_result > 350) ? 2 : 0;
+    soil_t_bad = (temperature_result < 12) ? 1 : (temperature_result > 30) ? 2
+                                                                           : 0;
+    air_h_bad = (hum < 10) ? 1 : (hum > 35) ? 2
+                                            : 0;
+    air_t_bad = (temp < 10) ? 1 : (temp > 35) ? 2
+                                              : 0;
+
+    strcpy(light_quality, (light_result < 100) ? "Dark" : (light_result < 250) ? "Dim"
+                                                      : (light_result < 600)   ? "Light"
+                                                      : (light_result < 900)   ? "Bright"
+                                                                               : "Very bright");
+
+    strcpy(soil_moisture_quality, (soil_m_bad == 1) ? "Dry" : (soil_m_bad == 2) ? "Wet"
+                                                                                : "Good");
+
+    strcpy(soil_temperature_quality, (soil_t_bad == 1) ? "Cold" : (soil_t_bad == 2) ? "Hot"
+                                                                                    : "Good");
+
+    strcpy(air_humidity_quality, (air_h_bad == 1) ? "Dry" : (air_h_bad == 2) ? "Wet"
+                                                                             : "Good");
+
+    strcpy(air_temperature_quality, (air_t_bad == 1) ? "Cold" : (air_t_bad == 2) ? "Hot"
+                                                                                 : "Good");
 }
 
 void display_results(SSD1306_t *dev)
@@ -421,63 +443,6 @@ char *display_val(SSD1306_t *dev)
 {
     receive_data();
     evaluate_conditions();
-
-    if (light_result < 100)
-    {
-        strcpy(light_quality, "Dark");
-    }
-    else if (light_result < 250)
-    {
-        strcpy(light_quality, "Dim");
-    }
-    else if (light_result < 600)
-    {
-        strcpy(light_quality, "Light");
-    }
-    else if (light_result < 900)
-    {
-        strcpy(light_quality, "Bright");
-    }
-    else
-    {
-        strcpy(light_quality, "Very bright");
-    }
-
-    if (soil_m_bad)
-    {
-        strcpy(soil_moisture_quality, "Bad");
-    }
-    else
-    {
-        strcpy(soil_moisture_quality, "Good");
-    }
-
-    if (soil_t_bad)
-    {
-        strcpy(soil_temperature_quality, "Bad");
-    }
-    else
-    {
-        strcpy(soil_temperature_quality, "Good");
-    }
-
-    if (air_h_bad)
-    {
-        strcpy(air_humidity_quality, "Bad");
-    }
-    else
-    {
-        strcpy(air_humidity_quality, "Good");
-    }
-
-    if (air_t_bad)
-    {
-        strcpy(air_temperature_quality, "Bad");
-    }
-    else
-    {
-        strcpy(air_temperature_quality, "Good");
-    }
 
     display_results(dev);
 
@@ -707,7 +672,7 @@ void button_switch(SSD1306_t *dev)
     int lastState = 2;
     const char *programRunning[] = {"Display values", "Display condi.", "Start Logging", "Display data", "Data write?"}; // Array of strings
     const char currentProgram[32];
-    
+
     sprintf(currentProgram, "%d. %s", switchState + 1, programRunning[switchState]);
     display_menu(dev, currentProgram);
     printf("Program : %s \t|", currentProgram);
@@ -762,13 +727,16 @@ void button_switch(SSD1306_t *dev)
         else
         {
             // receive_data();
-            if(lastState == 0){
+            if (lastState == 0)
+            {
                 display_val(dev);
             }
-            else if(lastState == 1){
+            else if (lastState == 1)
+            {
                 display_condition(dev);
             }
-            else{
+            else
+            {
                 printf("waiting\n");
             }
             vTaskDelay(100);
