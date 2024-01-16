@@ -377,7 +377,8 @@ void evaluate_conditions()
 {
     air_t_bad = (temp < 10) ? 1 : (temp > 35) ? 2
                                               : 0;
-    soil_m_bad = (moisture_result < 50) ? 1(moisture_result > 350) ? 2 : 0;
+    soil_m_bad = (moisture_result < 50) ? 1 : (moisture_result > 350) ? 2
+                                                                      : 0;
     soil_t_bad = (temperature_result < 12) ? 1 : (temperature_result > 30) ? 2
                                                                            : 0;
     air_h_bad = (hum < 10) ? 1 : (hum > 35) ? 2
@@ -403,9 +404,9 @@ void evaluate_conditions()
                                                                                  : "Good");
 }
 
-void display_results(SSD1306_t *dev)
+void display_values(SSD1306_t *dev)
 {
-
+    receive_data();
     char soil_m_result[32];
     char soil_t_result[32];
     sprintf(soil_m_result, "Gnd Mst: %d", moisture_result);
@@ -537,15 +538,11 @@ int read_to_file()
 char *sensor_data()
 {
     static char data_str[128];
-    int moisture_result;
-    float temperature_result;
+    
     stemma_soil(&moisture_result, &temperature_result);
 
-    float temp;
-    int hum;
     temperaure_humidity(&temp, &hum);
 
-    int light_result;
     light_adc(&light_result);
 
     snprintf(data_str, sizeof(data_str), "%d, %.1f, %d, %.1f, %d\n",
@@ -593,7 +590,7 @@ char *data_write(int cycles)
 
 void button_switch(SSD1306_t *dev)
 {
-    int switchState = 3;
+    int switchState = 0;
     int lastState = 2;
     const char *programRunning[] = {"Display values", "Display condi.", "Start Logging", "Display data", "Data write?"}; // Array of strings
     const char currentProgram[32];
@@ -621,7 +618,7 @@ void button_switch(SSD1306_t *dev)
             {
             case 0:
                 lastState = 0;
-                display_results(dev);
+                display_values(dev);
                 break;
             case 1:
                 lastState = 1;
@@ -654,7 +651,7 @@ void button_switch(SSD1306_t *dev)
             // receive_data();
             if (lastState == 0)
             {
-                display_results(dev);
+                display_values(dev);
             }
             else if (lastState == 1)
             {
