@@ -202,16 +202,27 @@ void receive_data()
 
 void evaluate_conditions()
 {
-    soil_m_bad = soil_moisture_value < 50 ? 1 : soil_moisture_value > 350 ? 2 : 0;
-    soil_t_bad = soil_temperature_value < 12 ? 1 : soil_temperature_value > 30 ? 2 : 0;
-    air_h_bad = air_humidity_value < 10 ? 1 : air_humidity_value > 35 ? 2 : 0;
-    air_t_bad = air_temperature_value < 10 ? 1 : air_temperature_value > 35 ? 2 : 0;
+    soil_m_bad = soil_moisture_value < 50 ? 1 : soil_moisture_value > 350 ? 2
+                                                                          : 0;
+    soil_t_bad = soil_temperature_value < 12 ? 1 : soil_temperature_value > 30 ? 2
+                                                                               : 0;
+    air_h_bad = air_humidity_value < 10 ? 1 : air_humidity_value > 35 ? 2
+                                                                      : 0;
+    air_t_bad = air_temperature_value < 10 ? 1 : air_temperature_value > 35 ? 2
+                                                                            : 0;
 
-    strcpy(light_quality, light_value < 100/41 ? "Dark" : light_value < 250/41 ? "Dim" : light_value < 600/41 ? "Light" : light_value < 900 /41? "Bright" : "Very bright");
-    strcpy(soil_moisture_quality, soil_m_bad == 1 ? "Dry" : soil_m_bad == 2 ? "Wet" : "Good");
-    strcpy(soil_temperature_quality, soil_t_bad == 1 ? "Cold" : soil_t_bad == 2 ? "Hot" : "Good");
-    strcpy(air_humidity_quality, air_h_bad == 1 ? "Dry" : air_h_bad == 2 ? "Wet" : "Good");
-    strcpy(air_temperature_quality, air_t_bad == 1 ? "Cold" : air_t_bad == 2 ? "Hot" : "Good");
+    strcpy(light_quality, light_value < 100 / 41 ? "Dark" : light_value < 250 / 41 ? "Dim"
+                                                        : light_value < 600 / 41   ? "Light"
+                                                        : light_value < 900 / 41   ? "Bright"
+                                                                                   : "Very bright");
+    strcpy(soil_moisture_quality, soil_m_bad == 1 ? "Dry" : soil_m_bad == 2 ? "Wet"
+                                                                            : "Good");
+    strcpy(soil_temperature_quality, soil_t_bad == 1 ? "Cold" : soil_t_bad == 2 ? "Hot"
+                                                                                : "Good");
+    strcpy(air_humidity_quality, air_h_bad == 1 ? "Dry" : air_h_bad == 2 ? "Wet"
+                                                                         : "Good");
+    strcpy(air_temperature_quality, air_t_bad == 1 ? "Cold" : air_t_bad == 2 ? "Hot"
+                                                                             : "Good");
 }
 
 void thresholder()
@@ -413,6 +424,14 @@ void button(gpio_num_t GPIO)
     gpio_config(&io_conf);
 }
 
+void display_happines(SSD1306_t *dev)
+{
+    evaluate_conditions();
+    char Happiness[64];
+    sprintf(Happiness,"Current State: %d%%: %s",)
+    ssd1306_display_text(dev, 2, Happiness, strlen(Happiness),false);
+}
+
 void app_main(void)
 {
     // startup
@@ -437,7 +456,7 @@ void app_main(void)
     // button_switch(&dev);
 
     int switchState = 0;
-    const char *programRunning[] = {"Display values", "Display condi.", "Start Logging", "Stop Logging", "Data output"}; // Array of strings
+    const char *programRunning[] = {"Display values", "Display condi.", "Start Logging", "Stop Logging", "Data output", "Happiness"}; // Array of strings
     const char currentProgram[32];
 
     sprintf(currentProgram, "%d. %s", switchState + 1, programRunning[switchState]);
@@ -450,7 +469,7 @@ void app_main(void)
         {
             buzzer_single_sound();
             btn1 = 0;
-            switchState = (switchState + 1) % 5;
+            switchState = (switchState + 1) % 6;
 
             sprintf(currentProgram, "%d. %s", switchState + 1, programRunning[switchState]);
 
@@ -483,7 +502,9 @@ void app_main(void)
                 break;
             case 4:
                 read_to_file(); // Implement this function to read and display the logged data
-
+                break;
+            case 5:
+                display_happines(&dev);
                 break;
             }
         }
