@@ -243,6 +243,40 @@ void rgb(int soil_m_bad, int soil_t_bad, int air_h_bad, int air_t_bad, int good_
     // 1000 ms delay
 }
 
+void buzzer_single_sound()
+{
+    // Prepare and then apply the LEDC PWM timer configuration (we use it for the buzzer)
+    ledc_timer_config_t ledc_timer_buzz = {
+        .speed_mode = BUZZ_MODE,
+        .duty_resolution = BUZZ_DUTY_RES,
+        .timer_num = BUZZ_TIMER,
+        .freq_hz = BUZZ_FREQUENCY, // Set output frequency at 1 kHz
+        .clk_cfg = LEDC_AUTO_CLK};
+    ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer_buzz));
+
+    // Prepare and then apply the LEDC PWM channel configuration
+    ledc_channel_config_t ledc_channel_buzz = {
+        .speed_mode = BUZZ_MODE,
+        .channel = BUZZ_CHANNEL,
+        .timer_sel = BUZZ_TIMER,
+        .intr_type = LEDC_INTR_DISABLE,
+        .gpio_num = BUZZ_OUTPUT_IO,
+        .duty = 0, // Set duty to 0%
+        .hpoint = 0};
+    ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel_buzz));
+
+    // Now the initialization is done
+    ESP_LOGI(tag, "Initialization complete. Playing 7 * 2 tones. First part slow, second part fast");
+
+    // Set duty
+    ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 50 * 4095 / 100)); // 50% duty //Can change 4096 to different sound qualities like "3*4096/4" which gives 75%
+    // Update duty to apply the new value
+    ESP_ERROR_CHECK(ledc_update_duty(BUZZ_MODE, BUZZ_CHANNEL));
+
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 523.25)); // 50% duty
+    vTaskDelay((200) / portTICK_PERIOD_MS);
+}
+
 void buzzer()
 {
     // Prepare and then apply the LEDC PWM timer configuration (we use it for the buzzer)
@@ -373,17 +407,29 @@ void receive_data()
     light_sensor(&light_value);
 }
 
-void evaluate_conditions() {
-    soil_m_bad = soil_moisture_value < 50 ? 1 : soil_moisture_value > 350 ? 2 : 0;
-    soil_t_bad = soil_temperature_value < 12 ? 1 : soil_temperature_value > 30 ? 2 : 0;
-    air_h_bad = air_humidity_value < 10 ? 1 : air_humidity_value > 35 ? 2 : 0;
-    air_t_bad = air_temperature_value < 10 ? 1 : air_temperature_value > 35 ? 2 : 0;
+void evaluate_conditions()
+{
+    soil_m_bad = soil_moisture_value < 50 ? 1 : soil_moisture_value > 350 ? 2
+                                                                          : 0;
+    soil_t_bad = soil_temperature_value < 12 ? 1 : soil_temperature_value > 30 ? 2
+                                                                               : 0;
+    air_h_bad = air_humidity_value < 10 ? 1 : air_humidity_value > 35 ? 2
+                                                                      : 0;
+    air_t_bad = air_temperature_value < 10 ? 1 : air_temperature_value > 35 ? 2
+                                                                            : 0;
 
-    strcpy(light_quality, light_value < 100 ? "Dark" : light_value < 250 ? "Dim" : light_value < 600 ? "Light" : light_value < 900 ? "Bright" : "Very bright");
-    strcpy(soil_moisture_quality, soil_m_bad == 1 ? "Dry" : soil_m_bad == 2 ? "Wet" : "Good");
-    strcpy(soil_temperature_quality, soil_t_bad == 1 ? "Cold" : soil_t_bad == 2 ? "Hot" : "Good");
-    strcpy(air_humidity_quality, air_h_bad == 1 ? "Dry" : air_h_bad == 2 ? "Wet" : "Good");
-    strcpy(air_temperature_quality, air_t_bad == 1 ? "Cold" : air_t_bad == 2 ? "Hot" : "Good");
+    strcpy(light_quality, light_value < 100 ? "Dark" : light_value < 250 ? "Dim"
+                                                   : light_value < 600   ? "Light"
+                                                   : light_value < 900   ? "Bright"
+                                                                         : "Very bright");
+    strcpy(soil_moisture_quality, soil_m_bad == 1 ? "Dry" : soil_m_bad == 2 ? "Wet"
+                                                                            : "Good");
+    strcpy(soil_temperature_quality, soil_t_bad == 1 ? "Cold" : soil_t_bad == 2 ? "Hot"
+                                                                                : "Good");
+    strcpy(air_humidity_quality, air_h_bad == 1 ? "Dry" : air_h_bad == 2 ? "Wet"
+                                                                         : "Good");
+    strcpy(air_temperature_quality, air_t_bad == 1 ? "Cold" : air_t_bad == 2 ? "Hot"
+                                                                             : "Good");
 }
 
 void thresholder()
@@ -514,7 +560,7 @@ void write_to_file()
         return;
     }
     fprintf(f, "\nTime, Soil moisture, Soil temperature, Air humidity, Air temperature, Light intensity\n"); // Use fprintf to write the string to the file
-    fclose(f);                                                                                         // Close the file pointer f, not stdout
+    fclose(f);                                                                                               // Close the file pointer f, not stdout
 }
 
 void stop_write_to_file()
@@ -606,7 +652,7 @@ void app_main(void)
     baseTime = esp_timer_get_time();
 
     // Go to main loop
-    //button_switch(&dev);
+    // button_switch(&dev);
 
     int switchState = 0;
     const char *programRunning[] = {"Display values", "Display condi.", "Start Logging", "Stop Logging", "Data output"}; // Array of strings
@@ -620,6 +666,7 @@ void app_main(void)
     {
         if (btn1)
         {
+            buzzer_single_sound();
             btn1 = 0;
             switchState = (switchState + 1) % 5;
 
@@ -630,7 +677,9 @@ void app_main(void)
         }
         else if (btn2)
         {
+            buzzer_single_sound();
             btn2 = 0;
+
             switch (switchState)
             {
             case 0:
@@ -659,7 +708,7 @@ void app_main(void)
         else
         {
             receive_data();
-             currentTime = esp_timer_get_time();
+            currentTime = esp_timer_get_time();
             if (currentTime > baseTime + 5000000 && start == 1)
             {
                 baseTime += currentTime - baseTime;
