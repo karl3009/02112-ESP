@@ -17,6 +17,7 @@ void display_menu(SSD1306_t *dev, const char *message)
     }
     vTaskDelay(20 / portTICK_PERIOD_MS);
 }
+
 void init_red_led()
 {
     gpio_config_t io_conf;
@@ -25,6 +26,7 @@ void init_red_led()
     io_conf.intr_type = GPIO_INTR_DISABLE;
     gpio_config(&io_conf);
 }
+
 void air_sensor()
 {
     i2c_dev_t dev = {0};
@@ -75,7 +77,7 @@ void light_sensor(int *light_value)
     ESP_LOGI(tag, "Light sensor ADC value: %d", val);
     // 500 ms delay
     vTaskDelay(pdMS_TO_TICKS(500)); // Delay for 1 secon
-    *light_value = val;
+    *light_value = val / 41;
 }
 
 void init_i2c()
@@ -205,7 +207,7 @@ void evaluate_conditions()
     air_h_bad = air_humidity_value < 10 ? 1 : air_humidity_value > 35 ? 2 : 0;
     air_t_bad = air_temperature_value < 10 ? 1 : air_temperature_value > 35 ? 2 : 0;
 
-    strcpy(light_quality, light_value < 100 ? "Dark" : light_value < 250 ? "Dim" : light_value < 600 ? "Light" : light_value < 900 ? "Bright" : "Very bright");
+    strcpy(light_quality, light_value < 100/41 ? "Dark" : light_value < 250/41 ? "Dim" : light_value < 600/41 ? "Light" : light_value < 900 /41? "Bright" : "Very bright");
     strcpy(soil_moisture_quality, soil_m_bad == 1 ? "Dry" : soil_m_bad == 2 ? "Wet" : "Good");
     strcpy(soil_temperature_quality, soil_t_bad == 1 ? "Cold" : soil_t_bad == 2 ? "Hot" : "Good");
     strcpy(air_humidity_quality, air_h_bad == 1 ? "Dry" : air_h_bad == 2 ? "Wet" : "Good");
@@ -260,7 +262,7 @@ void display_values(SSD1306_t *dev)
     pad_string(air_temperature_string_value, 31);
 
     char light_string_value[32];
-    sprintf(light_string_value, "LGT lvl: %d", light_value);
+    sprintf(light_string_value, "LGT lvl: %d%%", light_value);
     pad_string(light_string_value, 31);
 
     ssd1306_display_text(dev, 2, soil_moisture_string_value, strlen(soil_moisture_string_value), false);
@@ -496,18 +498,7 @@ void app_main(void)
                 append_to_file(sensor_data());
             }
             vTaskDelay(50);
-            if (switchState == 0)
-            {
-                display_values(&dev);
-            }
-            else if (switchState == 1)
-            {
-                display_condition(&dev);
-            }
-            else
-            {
-                printf("waiting\n");
-            }
+            switchState == 0 ? display_values(&dev) : (switchState == 1 ? display_condition(&dev) : printf("waiting\n"));
         }
     }
 }
