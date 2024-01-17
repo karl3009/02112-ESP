@@ -71,27 +71,14 @@
 static const char *TAG = "FileSystem";
 
 // button variabels
-int btn1;
-int btn2;
+int btn1, btn2;
 // Global variables
-int soil_moisture_value;
-float soil_temperature_value;
-float air_humidity_value;
-float air_temperature_value;
-int light_value;
-char light_quality[32];
-char air_humidity_quality[32];
-char air_temperature_quality[32];
-char soil_moisture_quality[32];
-char soil_temperature_quality[32];
-int soil_m_bad = 0;
-int soil_t_bad = 0;
-int air_h_bad = 0;
-int air_t_bad = 0;
-int start = 0;
-int good_condition = 0;
-int64_t baseTime;
-int64_t currentTime;
+// Global variables
+int soil_moisture_value, light_value;
+float soil_temperature_value, air_humidity_value, air_temperature_value;
+char light_quality[32], air_humidity_quality[32], air_temperature_quality[32], soil_moisture_quality[32], soil_temperature_quality[32];
+int soil_m_bad, soil_t_bad, air_h_bad, air_t_bad, start, good_condition;
+int64_t baseTime, currentTime;
 
 void display_menu(SSD1306_t *dev, const char *message)
 {
@@ -128,13 +115,7 @@ void air_sensor()
     // 500 ms delay
     vTaskDelay((500) / portTICK_PERIOD_MS);
 }
-void init_buttons(){
-    gpio_config_t io_conf;
-    io_conf.pin_bit_mask = (1ULL << BUTTON_1_GPIO_PIN) | (1ULL << BUTTON_2_GPIO_PIN);
-    io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.intr_type = GPIO_INTR_DISABLE;
-    gpio_config(&io_conf);
-}
+
 void soil_sensor(int *soil_moisture_value, float *soil_temperature_value)
 {
     int ret = ESP_OK;
@@ -380,11 +361,8 @@ void buzzer()
 void initDisplay(SSD1306_t *dev)
 {
     i2c_master_shared_i2c_init(dev);
-
     ssd1306_init(dev, 128, 64);
-
     ssd1306_clear_screen(dev, false);
-
     ssd1306_contrast(dev, 0xff);
 }
 
@@ -395,36 +373,19 @@ void receive_data()
     light_sensor(&light_value);
 }
 
-void evaluate_conditions()
-{
-    air_t_bad = (air_temperature_value < 10) ? 1 : (air_temperature_value > 35) ? 2
-                                              : 0;
-    soil_m_bad = (soil_moisture_value < 50) ? 1 : (soil_moisture_value > 350) ? 2
-                                                                      : 0;
-    soil_t_bad = (soil_temperature_value < 12) ? 1 : (soil_temperature_value > 30) ? 2
-                                                                           : 0;
-    air_h_bad = (air_humidity_value < 10) ? 1 : (air_humidity_value > 35) ? 2
-                                            : 0;
-    air_t_bad = (air_temperature_value < 10) ? 1 : (air_temperature_value > 35) ? 2
-                                              : 0;
+void evaluate_conditions() {
+    soil_m_bad = soil_moisture_value < 50 ? 1 : soil_moisture_value > 350 ? 2 : 0;
+    soil_t_bad = soil_temperature_value < 12 ? 1 : soil_temperature_value > 30 ? 2 : 0;
+    air_h_bad = air_humidity_value < 10 ? 1 : air_humidity_value > 35 ? 2 : 0;
+    air_t_bad = air_temperature_value < 10 ? 1 : air_temperature_value > 35 ? 2 : 0;
 
-    strcpy(light_quality, (light_value < 100) ? "Dark" : (light_value < 250) ? "Dim"
-                                                      : (light_value < 600)   ? "Light"
-                                                      : (light_value < 900)   ? "Bright"
-                                                                               : "Very bright");
-
-    strcpy(soil_moisture_quality, (soil_m_bad == 1) ? "Dry" : (soil_m_bad == 2) ? "Wet"
-                                                                                : "Good");
-
-    strcpy(soil_temperature_quality, (soil_t_bad == 1) ? "Cold" : (soil_t_bad == 2) ? "Hot"
-                                                                                    : "Good");
-
-    strcpy(air_humidity_quality, (air_h_bad == 1) ? "Dry" : (air_h_bad == 2) ? "Wet"
-                                                                             : "Good");
-
-    strcpy(air_temperature_quality, (air_t_bad == 1) ? "Cold" : (air_t_bad == 2) ? "Hot"
-                                                                                 : "Good");
+    strcpy(light_quality, light_value < 100 ? "Dark" : light_value < 250 ? "Dim" : light_value < 600 ? "Light" : light_value < 900 ? "Bright" : "Very bright");
+    strcpy(soil_moisture_quality, soil_m_bad == 1 ? "Dry" : soil_m_bad == 2 ? "Wet" : "Good");
+    strcpy(soil_temperature_quality, soil_t_bad == 1 ? "Cold" : soil_t_bad == 2 ? "Hot" : "Good");
+    strcpy(air_humidity_quality, air_h_bad == 1 ? "Dry" : air_h_bad == 2 ? "Wet" : "Good");
+    strcpy(air_temperature_quality, air_t_bad == 1 ? "Cold" : air_t_bad == 2 ? "Hot" : "Good");
 }
+
 void thresholder()
 {
     if (soil_m_bad || soil_t_bad || air_h_bad || air_t_bad)
@@ -602,7 +563,6 @@ char *sensor_data()
     return data_str;
 }
 
-
 void gpio_interrupt_handler_1(void *args)
 {
     btn1 = 1;
@@ -614,7 +574,6 @@ void gpio_interrupt_handler_2(void *args)
 
 void button(gpio_num_t GPIO)
 {
-
     gpio_config_t io_conf;
 
     // Button GPIO
@@ -635,8 +594,6 @@ void app_main(void)
     initDisplay(&dev);
     init_red_led();
 
-
-
     // Buttons
     gpio_install_isr_service(0);
     button(BUTTON_1_GPIO_PIN);
@@ -652,7 +609,6 @@ void app_main(void)
     //button_switch(&dev);
 
     int switchState = 0;
-    int lastState = 2;
     const char *programRunning[] = {"Display values", "Display condi.", "Start Logging", "Stop Logging", "Data output"}; // Array of strings
     const char currentProgram[32];
 
@@ -678,28 +634,23 @@ void app_main(void)
             switch (switchState)
             {
             case 0:
-                lastState = 0;
                 display_values(&dev);
                 break;
             case 1:
-                lastState = 1;
                 display_condition(&dev);
                 break;
             case 2:
                 // Start data logging for a specified duration
-                lastState = 2;
                 printf("Start data\n");
                 write_to_file(); // Implement this function to write the header to the file
                 display_menu(&dev, currentProgram);
                 break;
             case 3:
-                lastState = 3;
                 stop_write_to_file(); // Stops writing to file
                 printf("Stop Write\n");
                 display_menu(&dev, currentProgram);
                 break;
             case 4:
-                lastState = 4;
                 read_to_file(); // Implement this function to read and display the logged data
 
                 break;
