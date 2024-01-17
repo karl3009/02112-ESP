@@ -428,8 +428,15 @@ void display_happines(SSD1306_t *dev)
 {
     evaluate_conditions();
     char Happiness[64];
-    sprintf(Happiness,"Current State: %d%%: %s",)
+    sprintf(Happiness,"Current State: %d%%: %s",);
+    pad_string(Happiness, 63);
     ssd1306_display_text(dev, 2, Happiness, strlen(Happiness),false);
+    char empty[64];
+    pad_string(empty,63);
+    for(int i = 0; i<4; i++){
+        ssd1306_display_text(dev, i+2, empty, strlen(empty), false);
+    }
+
 }
 
 void app_main(void)
