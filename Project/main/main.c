@@ -74,11 +74,11 @@ static const char *TAG = "FileSystem";
 int btn1;
 int btn2;
 // Global variables
-int moisture_result;
-float temperature_result;
-float hum;
-float temp;
-int light_result;
+int soil_moisture_value;
+float soil_temperature_value;
+float air_humidity_value;
+float air_temperature_value;
+int light_value;
 char light_quality[32];
 char air_humidity_quality[32];
 char air_temperature_quality[32];
@@ -89,6 +89,7 @@ int soil_t_bad = 0;
 int air_h_bad = 0;
 int air_t_bad = 0;
 int start = 0;
+int good_condition = 0;
 int64_t baseTime;
 int64_t currentTime;
 
@@ -98,9 +99,24 @@ void display_menu(SSD1306_t *dev, const char *message)
     ssd1306_clear_screen(dev, false);
     ssd1306_contrast(dev, 0xff);
     ssd1306_display_text(dev, 0, message, strlen(message), false);
+    if (start == 1)
+    {
+        ssd1306_display_text(dev, 1, "Logging...", strlen("Logging..."), false);
+    }
+    else
+    {
+        ssd1306_display_text(dev, 1, "Not Logging...", strlen("Not Logging..."), false);
+    }
     vTaskDelay(20 / portTICK_PERIOD_MS);
 }
-
+void init_red_led()
+{
+    gpio_config_t io_conf;
+    io_conf.pin_bit_mask = (1ULL << RED_LED_GPIO);
+    io_conf.mode = GPIO_MODE_OUTPUT;
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    gpio_config(&io_conf);
+}
 void air_sensor()
 {
     i2c_dev_t dev = {0};
@@ -108,12 +124,18 @@ void air_sensor()
     // Initialize the sensor (shared i2c) only once after boot.
     ESP_ERROR_CHECK(am2320_shared_i2c_init(&dev, I2C_NUM));
 
-    esp_err_t res = am2320_get_rht(&dev, &temp, &hum);
+    esp_err_t res = am2320_get_rht(&dev, &air_temperature_value, &air_humidity_value);
     // 500 ms delay
     vTaskDelay((500) / portTICK_PERIOD_MS);
 }
-
-void soil_sensor(int *moisture_result, float *temperature_result)
+void init_buttons(){
+    gpio_config_t io_conf;
+    io_conf.pin_bit_mask = (1ULL << BUTTON_1_GPIO_PIN) | (1ULL << BUTTON_2_GPIO_PIN);
+    io_conf.mode = GPIO_MODE_INPUT;
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    gpio_config(&io_conf);
+}
+void soil_sensor(int *soil_moisture_value, float *soil_temperature_value)
 {
     int ret = ESP_OK;
     uint16_t moisture_value = 0;
@@ -138,11 +160,11 @@ void soil_sensor(int *moisture_result, float *temperature_result)
 
     // 500 ms delay
     vTaskDelay((500) / portTICK_PERIOD_MS);
-    *moisture_result = moisture_value - 650;
-    *temperature_result = temperature_value;
+    *soil_moisture_value = moisture_value - 650;
+    *soil_temperature_value = temperature_value;
 }
 
-void light_sensor(int *light_result)
+void light_sensor(int *light_value)
 {
     // Configuring the ADC
     adc1_config_width(ADC_WIDTH_BIT_12);
@@ -151,7 +173,7 @@ void light_sensor(int *light_result)
     ESP_LOGI(tag, "Light sensor ADC value: %d", val);
     // 500 ms delay
     vTaskDelay(pdMS_TO_TICKS(500)); // Delay for 1 secon
-    *light_result = val;
+    *light_value = val;
 }
 
 void init_i2c()
@@ -368,27 +390,27 @@ void initDisplay(SSD1306_t *dev)
 
 void receive_data()
 {
-    soil_sensor(&moisture_result, &temperature_result);
-    air_sensor(&temp, &hum);
-    light_sensor(&light_result);
+    soil_sensor(&soil_moisture_value, &soil_temperature_value);
+    air_sensor(&air_temperature_value, &air_humidity_value);
+    light_sensor(&light_value);
 }
 
 void evaluate_conditions()
 {
-    air_t_bad = (temp < 10) ? 1 : (temp > 35) ? 2
+    air_t_bad = (air_temperature_value < 10) ? 1 : (air_temperature_value > 35) ? 2
                                               : 0;
-    soil_m_bad = (moisture_result < 50) ? 1 : (moisture_result > 350) ? 2
+    soil_m_bad = (soil_moisture_value < 50) ? 1 : (soil_moisture_value > 350) ? 2
                                                                       : 0;
-    soil_t_bad = (temperature_result < 12) ? 1 : (temperature_result > 30) ? 2
+    soil_t_bad = (soil_temperature_value < 12) ? 1 : (soil_temperature_value > 30) ? 2
                                                                            : 0;
-    air_h_bad = (hum < 10) ? 1 : (hum > 35) ? 2
+    air_h_bad = (air_humidity_value < 10) ? 1 : (air_humidity_value > 35) ? 2
                                             : 0;
-    air_t_bad = (temp < 10) ? 1 : (temp > 35) ? 2
+    air_t_bad = (air_temperature_value < 10) ? 1 : (air_temperature_value > 35) ? 2
                                               : 0;
 
-    strcpy(light_quality, (light_result < 100) ? "Dark" : (light_result < 250) ? "Dim"
-                                                      : (light_result < 600)   ? "Light"
-                                                      : (light_result < 900)   ? "Bright"
+    strcpy(light_quality, (light_value < 100) ? "Dark" : (light_value < 250) ? "Dim"
+                                                      : (light_value < 600)   ? "Light"
+                                                      : (light_value < 900)   ? "Bright"
                                                                                : "Very bright");
 
     strcpy(soil_moisture_quality, (soil_m_bad == 1) ? "Dry" : (soil_m_bad == 2) ? "Wet"
@@ -422,26 +444,25 @@ void thresholder()
 
 void display_values(SSD1306_t *dev)
 {
-    // receive_data();
-    char soil_m_result[32];
-    char soil_t_result[32];
-    sprintf(soil_m_result, "Gnd Mst: %d", moisture_result);
-    sprintf(soil_t_result, "Gnd Tmp: %.1fC", temperature_result);
+    char soil_moisture_string_value[32];
+    char soil_temperature_string_value[32];
+    sprintf(soil_moisture_string_value, "Gnd Mst: %d", soil_moisture_value);
+    sprintf(soil_temperature_string_value, "Gnd Tmp: %.1fC", soil_temperature_value);
 
-    char air_m_result[32];
-    char air_t_result[32];
-    sprintf(air_m_result, "Air Hum: %.1f%%  ", hum);
-    sprintf(air_t_result, "Air Tmp: %.1fC", temp);
+    char air_humidity_string_value[32];
+    char air_temperature_string_value[32];
+    sprintf(air_humidity_string_value, "Air Hum: %.1f%%  ", air_humidity_value);
+    sprintf(air_temperature_string_value, "Air Tmp: %.1fC", air_temperature_value);
 
-    char light_display[32];
-    sprintf(light_display, "LGT lvl: %d", light_result);
+    char light_string_value[32];
+    sprintf(light_string_value, "LGT lvl: %d", light_value);
 
-    ssd1306_display_text(dev, 2, soil_m_result, strlen(soil_m_result), false);
-    ssd1306_display_text(dev, 3, soil_t_result, strlen(soil_t_result), false);
-    ssd1306_display_text(dev, 4, air_m_result, strlen(air_t_result), false);
-    ssd1306_display_text(dev, 5, air_t_result, strlen(air_m_result), false);
-    ssd1306_display_text(dev, 6, light_display, strlen(light_display), false);
-
+    ssd1306_display_text(dev, 2, soil_moisture_string_value, strlen(soil_moisture_string_value), false);
+    ssd1306_display_text(dev, 3, soil_temperature_string_value, strlen(soil_temperature_string_value), false);
+    ssd1306_display_text(dev, 4, air_humidity_string_value, strlen(air_temperature_string_value), false);
+    ssd1306_display_text(dev, 5, air_temperature_string_value, strlen(air_humidity_string_value), false);
+    ssd1306_display_text(dev, 6, light_string_value, strlen(light_string_value), false);
+    evaluate_conditions();
     thresholder();
 }
 
@@ -461,32 +482,31 @@ char *pad_string(char *str, int line_length)
 
 void display_condition(SSD1306_t *dev)
 {
-    // receive_data();
     evaluate_conditions();
 
-    char soil_m_result[64];
-    char soil_t_result[64];
-    sprintf(soil_m_result, "Gnd Mst: %s", soil_moisture_quality);
-    sprintf(soil_t_result, "Gnd Tmp: %s", soil_temperature_quality);
+    char soil_moisture_condition[64];
+    char soil_tempereature_condition[64];
+    sprintf(soil_moisture_condition, "Gnd Mst: %s", soil_moisture_quality);
+    sprintf(soil_tempereature_condition, "Gnd Tmp: %s", soil_temperature_quality);
     // Ensure each string fills the entire line
-    pad_string(soil_m_result, 63);
-    pad_string(soil_t_result, 63);
+    pad_string(soil_moisture_condition, 63);
+    pad_string(soil_tempereature_condition, 63);
 
-    char air_m_result[64];
-    char air_t_result[64];
-    sprintf(air_m_result, "Air Hum: %s", air_humidity_quality);
-    sprintf(air_t_result, "Air Tmp: %s", air_temperature_quality);
-    pad_string(air_m_result, 63);
-    pad_string(air_t_result, 63);
+    char air_humidity__condition[64];
+    char air_temperature_condition[64];
+    sprintf(air_humidity__condition, "Air Hum: %s", air_humidity_quality);
+    sprintf(air_temperature_condition, "Air Tmp: %s", air_temperature_quality);
+    pad_string(air_humidity__condition, 63);
+    pad_string(air_temperature_condition, 63);
 
     char light_display[64];
     sprintf(light_display, "LGT lvl: %s", light_quality);
     pad_string(light_display, 63);
 
-    ssd1306_display_text(dev, 2, soil_m_result, strlen(soil_m_result), false);
-    ssd1306_display_text(dev, 3, soil_t_result, strlen(soil_t_result), false);
-    ssd1306_display_text(dev, 4, air_m_result, strlen(air_t_result), false);
-    ssd1306_display_text(dev, 5, air_t_result, strlen(air_m_result), false);
+    ssd1306_display_text(dev, 2, soil_moisture_condition, strlen(soil_moisture_condition), false);
+    ssd1306_display_text(dev, 3, soil_tempereature_condition, strlen(soil_tempereature_condition), false);
+    ssd1306_display_text(dev, 4, air_humidity__condition, strlen(air_temperature_condition), false);
+    ssd1306_display_text(dev, 5, air_temperature_condition, strlen(air_humidity__condition), false);
     ssd1306_display_text(dev, 6, light_display, strlen(light_display), false);
 
     thresholder();
@@ -577,96 +597,11 @@ int read_to_file()
 char *sensor_data()
 {
     static char data_str[128];
-
-    // receive_data();
     snprintf(data_str, sizeof(data_str), "%lld, %d, %.1f, %.1f, %.1f, %d\n",
-             currentTime / 100000, moisture_result, temperature_result, hum, temp, light_result);
+             currentTime / 100000, soil_moisture_value, soil_temperature_value, air_humidity_value, air_temperature_value, light_value);
     return data_str;
 }
 
-void button_switch(SSD1306_t *dev)
-{
-    int switchState = 0;
-    int lastState = 2;
-    const char *programRunning[] = {"Display values", "Display condi.", "Start Logging", "Stop Logging", "Data output"}; // Array of strings
-    const char currentProgram[32];
-
-    sprintf(currentProgram, "%d. %s", switchState + 1, programRunning[switchState]);
-    display_menu(dev, currentProgram);
-    printf("Program : %s \t|", currentProgram);
-
-    while (true)
-    {
-        if (btn1)
-        {
-            btn1 = 0;
-            switchState = (switchState + 1) % 5;
-
-            sprintf(currentProgram, "%d. %s", switchState + 1, programRunning[switchState]);
-
-            display_menu(dev, currentProgram);
-            printf("Program : %s \t|", currentProgram);
-        }
-        else if (btn2)
-        {
-            btn2 = 0;
-            switch (switchState)
-            {
-            case 0:
-                lastState = 0;
-                display_values(dev);
-                break;
-            case 1:
-                lastState = 1;
-                display_condition(dev);
-                break;
-            case 2:
-                // Start data logging for a specified duration
-                lastState = 2;
-                printf("Start data\n");
-                write_to_file(); // Implement this function to write the header to the file
-                break;
-            case 3:
-                lastState = 3;
-                stop_write_to_file(); // Stops writing to file
-                printf("Stop Write\n");
-                break;
-            case 4:
-                lastState = 4;
-                read_to_file(); // Implement this function to read and display the logged data
-
-                break;
-            }
-        }
-        else
-        {
-         
-            receive_data();
-             currentTime = esp_timer_get_time();
-            if (currentTime > baseTime + 5000000 && start == 1)
-            {
-                baseTime += currentTime - baseTime;
-                printf("Appending\n");
-                append_to_file(sensor_data());
-            }
-            vTaskDelay(50);
-            if (switchState == 0)
-            {
-                display_values(dev);
-            }
-            else if (switchState == 1)
-            {
-                display_condition(dev);
-            }
-            else
-            {
-                printf("waiting\n");
-            }
-
-           
-        }
-    }
-}
 
 void gpio_interrupt_handler_1(void *args)
 {
@@ -698,13 +633,9 @@ void app_main(void)
     init_i2c();
     initfileread();
     initDisplay(&dev);
+    init_red_led();
 
-    // Configure RED LED GPIO (make a function maybe)
-    gpio_config_t io_conf;
-    io_conf.pin_bit_mask = (1ULL << RED_LED_GPIO);
-    io_conf.mode = GPIO_MODE_OUTPUT;
-    io_conf.intr_type = GPIO_INTR_DISABLE;
-    gpio_config(&io_conf);
+
 
     // Buttons
     gpio_install_isr_service(0);
@@ -718,5 +649,85 @@ void app_main(void)
     baseTime = esp_timer_get_time();
 
     // Go to main loop
-    button_switch(&dev);
+    //button_switch(&dev);
+
+    int switchState = 0;
+    int lastState = 2;
+    const char *programRunning[] = {"Display values", "Display condi.", "Start Logging", "Stop Logging", "Data output"}; // Array of strings
+    const char currentProgram[32];
+
+    sprintf(currentProgram, "%d. %s", switchState + 1, programRunning[switchState]);
+    display_menu(&dev, currentProgram);
+    printf("Program : %s \t|", currentProgram);
+
+    while (true)
+    {
+        if (btn1)
+        {
+            btn1 = 0;
+            switchState = (switchState + 1) % 5;
+
+            sprintf(currentProgram, "%d. %s", switchState + 1, programRunning[switchState]);
+
+            display_menu(&dev, currentProgram);
+            printf("Program : %s \t|", currentProgram);
+        }
+        else if (btn2)
+        {
+            btn2 = 0;
+            switch (switchState)
+            {
+            case 0:
+                lastState = 0;
+                display_values(&dev);
+                break;
+            case 1:
+                lastState = 1;
+                display_condition(&dev);
+                break;
+            case 2:
+                // Start data logging for a specified duration
+                lastState = 2;
+                printf("Start data\n");
+                write_to_file(); // Implement this function to write the header to the file
+                display_menu(&dev, currentProgram);
+                break;
+            case 3:
+                lastState = 3;
+                stop_write_to_file(); // Stops writing to file
+                printf("Stop Write\n");
+                display_menu(&dev, currentProgram);
+                break;
+            case 4:
+                lastState = 4;
+                read_to_file(); // Implement this function to read and display the logged data
+
+                break;
+            }
+        }
+        else
+        {
+            receive_data();
+             currentTime = esp_timer_get_time();
+            if (currentTime > baseTime + 5000000 && start == 1)
+            {
+                baseTime += currentTime - baseTime;
+                printf("Appending\n");
+                append_to_file(sensor_data());
+            }
+            vTaskDelay(50);
+            if (switchState == 0)
+            {
+                display_values(&dev);
+            }
+            else if (switchState == 1)
+            {
+                display_condition(&dev);
+            }
+            else
+            {
+                printf("waiting\n");
+            }
+        }
+    }
 }
