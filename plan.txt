@@ -16,3 +16,5 @@ Threshhold for lys og fugtighed - søren
 Temperatur skal bare kalibreres -søren
 Display information - victor
 Opdate data
+
+---TO DO---

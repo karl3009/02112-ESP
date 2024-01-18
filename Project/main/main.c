@@ -1,6 +1,7 @@
 #include "main.h"
 #include "bitmaps.h"
 #include "buzzer.h"
+// #include <displayhappines.c>
 
 void display_menu(SSD1306_t *dev, const char *message)
 {
@@ -101,23 +102,46 @@ void init_i2c()
     ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0));
 }
 
-void rgb(int soil_m_bad, int soil_t_bad, int air_h_bad, int air_t_bad, int good_condition)
+void rgb(int light)
 {
     int red_duty = 0;
     int green_duty = 0;
     int blue_duty = 0;
     int scale = 8100 / 255;
 
-    if (soil_m_bad == 1 || air_h_bad == 1)
+    if (light == 1)
+    {
+        red_duty = 0;
+        green_duty = 0;
+        blue_duty = 0;
+    }
+    else if (soil_m_bad == 1 || soil_m_bad == 2)
     {
         blue_duty = scale * 255;
     }
-    if (soil_t_bad == 1 || air_t_bad == 1)
+    else if (air_h_bad == 1 || air_h_bad == 2)
+    {
+        blue_duty = scale * 125;
+        red_duty = scale * 130;
+    }
+    else if (air_t_bad == 1 || air_t_bad == 2)
+    {
+        blue_duty = scale * 255;
+        red_duty = scale * 255;
+        green_duty = scale * 255;
+    }
+    else if (soil_t_bad == 1 || soil_t_bad == 2)
     {
         red_duty = scale * 255;
     }
-    if (good_condition == 1)
+    else
     {
+        green_duty = scale * 255 / 8;
+        vTaskDelay(150);
+        green_duty = scale * 255 / 4;
+        vTaskDelay(150);
+        green_duty = scale * 255 / 2;
+        vTaskDelay(150);
         green_duty = scale * 255;
     }
 
@@ -146,7 +170,7 @@ void rgb(int soil_m_bad, int soil_t_bad, int air_h_bad, int air_t_bad, int good_
         .timer_sel = LEDC_TIMER,
         .intr_type = LEDC_INTR_DISABLE,
         .gpio_num = LEDC_OUTPUT_IO_GREEN,
-        .duty = 0, // Set duty to 0%
+        .duty = green_duty, // Set duty to 0%
         .hpoint = 0};
     ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel_green));
 
@@ -156,7 +180,7 @@ void rgb(int soil_m_bad, int soil_t_bad, int air_h_bad, int air_t_bad, int good_
         .timer_sel = LEDC_TIMER,
         .intr_type = LEDC_INTR_DISABLE,
         .gpio_num = LEDC_OUTPUT_IO_BLUE,
-        .duty = 0, // Set duty to 0%
+        .duty = blue_duty, // Set duty to 0%
         .hpoint = 0};
     ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel_blue));
 
@@ -207,32 +231,69 @@ void receive_data()
 
 void evaluate_conditions()
 {
-    soil_m_bad = soil_moisture_value  < 50  * 100 / 450 ? 1 : soil_moisture_value > 350  * 100 / 450 ? 2 : 0;
-    soil_t_bad = soil_temperature_value < 12 ? 1 : soil_temperature_value > 30 ? 2 : 0;
-    air_h_bad = air_humidity_value < 10 ? 1 : air_humidity_value > 35 ? 2 : 0;
-    air_t_bad = air_temperature_value < 10 ? 1 : air_temperature_value > 35 ? 2 : 0;
+    soil_m_bad = soil_moisture_value < 15 ? 1 : soil_moisture_value > 80 ? 2
+                                                                         : 0;
+    soil_t_bad = soil_temperature_value < 12 ? 1 : soil_temperature_value > 30 ? 2
+                                                                               : 0;
+    air_h_bad = air_humidity_value < 10 ? 1 : air_humidity_value > 35 ? 2
+                                                                      : 0;
+    air_t_bad = air_temperature_value < 10 ? 1 : air_temperature_value > 35 ? 2
+                                                                            : 0;
+    soil_temperature_happiness = soil_temperature_value > 16 && soil_temperature_value < 22 ? 1 : 0;
+    soil_moisture_happiness = soil_moisture_value > 25 && soil_moisture_value < 70 ? 1 : 0;
+    air_temperature_happiness = air_temperature_value > 16 && air_temperature_value < 22 ? 1 : 0;
+    air_humidity_happiness = air_humidity_value > 11 && air_humidity_value < 25 ? 1 : 0;
+    light_happiness = light_value > 400 / 41 && light_value < 700 / 41 ? 1 : 0;
 
-    strcpy(light_quality, light_value < 100/41 ? "Dark" : light_value < 250/41 ? "Dim" : light_value < 600/41 ? "Light" : light_value < 900 /41? "Bright" : "Very bright");
-    strcpy(soil_moisture_quality, soil_m_bad == 1 ? "Dry" : soil_m_bad == 2 ? "Wet" : "Good");
-    strcpy(soil_temperature_quality, soil_t_bad == 1 ? "Cold" : soil_t_bad == 2 ? "Hot" : "Good");
-    strcpy(air_humidity_quality, air_h_bad == 1 ? "Dry" : air_h_bad == 2 ? "Wet" : "Good");
-    strcpy(air_temperature_quality, air_t_bad == 1 ? "Cold" : air_t_bad == 2 ? "Hot" : "Good");
+    strcpy(light_quality, light_value < 100 / 41 ? "Dark" : light_value < 250 / 41 ? "Dim"
+                                                        : light_value < 600 / 41   ? "Light"
+                                                        : light_value < 900 / 41   ? "Bright"
+                                                                                   : "Very bright");
+    strcpy(soil_moisture_quality, soil_m_bad == 1 ? "Dry" : soil_m_bad == 2 ? "Wet"
+                                                                            : "Good");
+    strcpy(soil_temperature_quality, soil_t_bad == 1 ? "Cold" : soil_t_bad == 2 ? "Hot"
+                                                                                : "Good");
+    strcpy(air_humidity_quality, air_h_bad == 1 ? "Dry" : air_h_bad == 2 ? "Wet"
+                                                                         : "Good");
+    strcpy(air_temperature_quality, air_t_bad == 1 ? "Cold" : air_t_bad == 2 ? "Hot"
+                                                                             : "Good");
+    if (soil_m_bad || soil_t_bad || air_h_bad || air_t_bad)
+    {
+        general_happiness = 0;
+    }
+    else if (soil_moisture_happiness && soil_temperature_happiness && air_temperature_happiness && air_humidity_happiness && light_happiness)
+    {
+        general_happiness = 2;
+    }
+    else
+    {
+        general_happiness = 1;
+    }
 }
 
 void thresholder()
 {
-    if (soil_m_bad || soil_t_bad || air_h_bad || air_t_bad)
+    if (light_value < 4)
+    {
+        soil_m_bad = 0;
+        soil_t_bad = 0;
+        air_h_bad = 0;
+        air_t_bad = 0;
+        rgb(1);
+        gpio_set_level(RED_LED_GPIO, 0);
+    }
+    else if (soil_m_bad || soil_t_bad || air_h_bad || air_t_bad)
     {
         printf("\nLight: %s, Soil M : %s, Soil T: %s, Air T: %s, Air H: %s\n", light_quality, soil_moisture_quality, soil_temperature_quality, air_temperature_quality, air_humidity_quality);
         gpio_set_level(RED_LED_GPIO, 1);
-        rgb(soil_m_bad, soil_t_bad, air_h_bad, air_t_bad, 0);
+        rgb(0);
         buzzer();
     }
     else
     {
         printf("\nLight: %s, Soil M : %s, Soil T: %s, Air T: %s, Air H: %s\n", light_quality, soil_moisture_quality, soil_temperature_quality, air_temperature_quality, air_humidity_quality);
         gpio_set_level(RED_LED_GPIO, 0);
-        rgb(0, 0, 0, 0, 1);
+        rgb(0);
     }
 }
 
@@ -418,7 +479,14 @@ void button(gpio_num_t GPIO)
     gpio_config(&io_conf);
 }
 
-
+void display_happines(SSD1306_t *dev)
+{
+    evaluate_conditions();
+    char Happiness[64];
+    sprintf(Happiness, "Happiness: %1.f%%", general_happiness);
+    pad_string(Happiness, 63);
+    ssd1306_display_text(dev, 2, Happiness, strlen(Happiness), false);
+}
 
 void app_main(void)
 {
@@ -448,7 +516,7 @@ void app_main(void)
     // button_switch(&dev);
 
     int switchState = 0;
-    const char *programRunning[] = {"Display values", "Display condi.", "Start Logging", "Stop Logging", "Data output"}; // Array of strings
+    const char *programRunning[] = {"Display values", "Display condi.", "Start Logging", "Stop Logging", "Data output", "Happiness"}; // Array of strings
     const char currentProgram[32];
 
     sprintf(currentProgram, "%d. %s", switchState + 1, programRunning[switchState]);
@@ -461,7 +529,7 @@ void app_main(void)
         {
             buzzer_single_sound();
             btn1 = 0;
-            switchState = (switchState + 1) % 5;
+            switchState = (switchState + 1) % 6;
 
             sprintf(currentProgram, "%d. %s", switchState + 1, programRunning[switchState]);
 
@@ -494,7 +562,9 @@ void app_main(void)
                 break;
             case 4:
                 read_to_file(); // Implement this function to read and display the logged data
-
+                break;
+            case 5:
+                display_happines(&dev);
                 break;
             }
         }
