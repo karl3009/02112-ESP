@@ -1,5 +1,7 @@
 #include "main.h"
 #include "buzzer.h"
+#include <displayhappines.c>
+
 
 void display_menu(SSD1306_t *dev, const char *message)
 {
@@ -105,11 +107,22 @@ void rgb(int soil_m_bad, int soil_t_bad, int air_h_bad, int air_t_bad, int good_
     int blue_duty = 0;
     int scale = 8100 / 255;
 
-    if (soil_m_bad == 1 || air_h_bad == 1)
+    if (soil_m_bad == 1)
     {
         blue_duty = scale * 255;
     }
-    if (soil_t_bad == 1 || air_t_bad == 1)
+    if (air_h_bad == 1) 
+    {
+        blue_duty = scale * 255/2;
+        red_duty = scale * 255/2;
+    }
+    if (air_t_bad == 1)
+    {
+        blue_duty = scale * 255/3;
+        red_duty = scale * 255/3;
+        green_duty = scale * 255/3;
+    }
+    if (soil_t_bad == 1)
     {
         red_duty = scale * 255;
     }
