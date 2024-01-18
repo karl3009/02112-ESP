@@ -94,6 +94,12 @@ int air_h_bad = 0;
 int air_t_bad = 0;
 int logging = 0;
 int good_condition = 0;
+float soil_temperature_happiness;
+float soil_moisture_happiness;
+float air_temperature_happiness;
+float air_humidity_happiness;
+float light_happiness;
+float general_happiness;
 int64_t baseTime;
 int64_t currentTime;
 

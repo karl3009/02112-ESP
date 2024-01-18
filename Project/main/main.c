@@ -210,6 +210,17 @@ void evaluate_conditions()
                                                                       : 0;
     air_t_bad = air_temperature_value < 10 ? 1 : air_temperature_value > 35 ? 2
                                                                             : 0;
+    soil_temperature_happiness = soil_temperature_value <= 18 ? (soil_temperature_value / 18) * 100 : 100 - (((soil_temperature_value / 18)) * 100 - 100);
+
+    soil_moisture_happiness = soil_moisture_value <= 150 ? (soil_moisture_value / 150) * 100 : 100 - (((soil_moisture_value / 150)) * 100 - 100);
+
+    air_temperature_happiness = air_temperature_value <= 18 ? (air_temperature_value / 18) * 100 : 100 - (((air_temperature_value / 18)) * 100 - 100);
+
+    air_humidity_happiness = air_humidity_value <= 20 ? (air_humidity_value / 20) * 100 : 100 - (((air_humidity_value / 20)) * 100 - 100);
+
+    light_happiness = light_value <= 14 ? (light_value / 14) * 100 : 100 - (((light_value / 14)) * 100 - 100);
+
+    general_happiness = (soil_temperature_happiness + soil_moisture_happiness + air_temperature_happiness + air_humidity_happiness + light_happiness) / 5;
 
     strcpy(light_quality, light_value < 100 / 41 ? "Dark" : light_value < 250 / 41 ? "Dim"
                                                         : light_value < 600 / 41   ? "Light"
@@ -428,15 +439,9 @@ void display_happines(SSD1306_t *dev)
 {
     evaluate_conditions();
     char Happiness[64];
-    sprintf(Happiness,"Current State: %d%%: %s",);
+    sprintf(Happiness, "Happiness: %1.f%%", general_happiness);
     pad_string(Happiness, 63);
-    ssd1306_display_text(dev, 2, Happiness, strlen(Happiness),false);
-    char empty[64];
-    pad_string(empty,63);
-    for(int i = 0; i<4; i++){
-        ssd1306_display_text(dev, i+2, empty, strlen(empty), false);
-    }
-
+    ssd1306_display_text(dev, 2, Happiness, strlen(Happiness), false);
 }
 
 void app_main(void)
