@@ -1,4 +1,5 @@
 #include "main.h"
+#include "bitmaps.h"
 #include "buzzer.h"
 
 void display_menu(SSD1306_t *dev, const char *message)
@@ -64,7 +65,7 @@ void soil_sensor(int *soil_moisture_value, float *soil_temperature_value)
 
     // 500 ms delay
     vTaskDelay((500) / portTICK_PERIOD_MS);
-    *soil_moisture_value = moisture_value - 650;
+    *soil_moisture_value = (moisture_value - 650) * 100 / 450;
     *soil_temperature_value = temperature_value;
 }
 
@@ -79,6 +80,8 @@ void light_sensor(int *light_value)
     vTaskDelay(pdMS_TO_TICKS(500)); // Delay for 1 secon
     *light_value = val / 41;
 }
+
+
 
 void init_i2c()
 {
@@ -166,6 +169,8 @@ void rgb(int soil_m_bad, int soil_t_bad, int air_h_bad, int air_t_bad, int good_
     // 1000 ms delay
 }
 
+
+
 void buzzer_single_sound()
 {
     buzzer_init();
@@ -202,7 +207,7 @@ void receive_data()
 
 void evaluate_conditions()
 {
-    soil_m_bad = soil_moisture_value < 50 ? 1 : soil_moisture_value > 350 ? 2 : 0;
+    soil_m_bad = soil_moisture_value  < 50  * 100 / 450 ? 1 : soil_moisture_value > 350  * 100 / 450 ? 2 : 0;
     soil_t_bad = soil_temperature_value < 12 ? 1 : soil_temperature_value > 30 ? 2 : 0;
     air_h_bad = air_humidity_value < 10 ? 1 : air_humidity_value > 35 ? 2 : 0;
     air_t_bad = air_temperature_value < 10 ? 1 : air_temperature_value > 35 ? 2 : 0;
@@ -249,7 +254,7 @@ void display_values(SSD1306_t *dev)
 {
     char soil_moisture_string_value[32];
     char soil_temperature_string_value[32];
-    sprintf(soil_moisture_string_value, "Gnd Mst: %d", soil_moisture_value);
+    sprintf(soil_moisture_string_value, "Gnd Mst: %d%%", soil_moisture_value);
     sprintf(soil_temperature_string_value, "Gnd Tmp: %.1fC", soil_temperature_value);
     pad_string(soil_moisture_string_value, 31);
     pad_string(soil_temperature_string_value, 31);
@@ -413,6 +418,8 @@ void button(gpio_num_t GPIO)
     gpio_config(&io_conf);
 }
 
+
+
 void app_main(void)
 {
     // startup
@@ -420,7 +427,11 @@ void app_main(void)
     init_i2c();
     initfileread();
     initDisplay(&dev);
+    ssd1306_bitmaps(&dev, 0, 0, happyFace(), 128, 64, false);
+
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
     init_red_led();
+
 
     // Buttons
     gpio_install_isr_service(0);
@@ -502,3 +513,4 @@ void app_main(void)
         }
     }
 }
+c:\Users\dingv\OneDrive\Uni\1.Semester\02112\DEMO\sample_project\main\bitmaps.h c:\Users\dingv\OneDrive\Uni\1.Semester\02112\DEMO\sample_project\main\bitmaps.c
