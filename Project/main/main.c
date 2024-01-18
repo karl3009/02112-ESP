@@ -1,6 +1,6 @@
 #include "main.h"
 #include "buzzer.h"
-//#include <displayhappines.c>
+// #include <displayhappines.c>
 
 void display_menu(SSD1306_t *dev, const char *message)
 {
@@ -99,39 +99,45 @@ void init_i2c()
     ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0));
 }
 
-void rgb(int soil_m_bad, int soil_t_bad, int air_h_bad, int air_t_bad, int good_condition)
+void rgb(int light)
 {
     int red_duty = 0;
     int green_duty = 0;
     int blue_duty = 0;
     int scale = 8100 / 255;
 
-    if (soil_m_bad == 1 || soil_m_bad == 2)
+    if (light == 1)
+    {
+        red_duty = 0;
+        green_duty = 0;
+        blue_duty = 0;
+    }
+    else if (soil_m_bad == 1 || soil_m_bad == 2)
     {
         blue_duty = scale * 255;
     }
-    if (air_h_bad == 1 ||air_h_bad == 2)
+    else if (air_h_bad == 1 || air_h_bad == 2)
     {
-        blue_duty = scale * 255 / 2;
-        red_duty = scale * 255 / 2;
+        blue_duty = scale * 125;
+        red_duty = scale * 130;
     }
-    if (air_t_bad == 1 || air_t_bad == 2)
+    else if (air_t_bad == 1 || air_t_bad == 2)
     {
-        blue_duty = scale * 255 / 3;
-        red_duty = scale * 255 / 3;
-        green_duty = scale * 255 / 3;
+        blue_duty = scale * 255;
+        red_duty = scale * 255;
+        green_duty = scale * 255;
     }
-    if (soil_t_bad == 1 || soil_t_bad == 2)
+    else if (soil_t_bad == 1 || soil_t_bad == 2)
     {
         red_duty = scale * 255;
     }
-    if (good_condition == 1)
+    else
     {
-        green_duty = scale * 255/8;
+        green_duty = scale * 255 / 8;
         vTaskDelay(150);
-        green_duty = scale * 255/4;
+        green_duty = scale * 255 / 4;
         vTaskDelay(150);
-        green_duty = scale * 255/2;
+        green_duty = scale * 255 / 2;
         vTaskDelay(150);
         green_duty = scale * 255;
     }
@@ -161,7 +167,7 @@ void rgb(int soil_m_bad, int soil_t_bad, int air_h_bad, int air_t_bad, int good_
         .timer_sel = LEDC_TIMER,
         .intr_type = LEDC_INTR_DISABLE,
         .gpio_num = LEDC_OUTPUT_IO_GREEN,
-        .duty = 0, // Set duty to 0%
+        .duty = green_duty, // Set duty to 0%
         .hpoint = 0};
     ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel_green));
 
@@ -171,7 +177,7 @@ void rgb(int soil_m_bad, int soil_t_bad, int air_h_bad, int air_t_bad, int good_
         .timer_sel = LEDC_TIMER,
         .intr_type = LEDC_INTR_DISABLE,
         .gpio_num = LEDC_OUTPUT_IO_BLUE,
-        .duty = 0, // Set duty to 0%
+        .duty = blue_duty, // Set duty to 0%
         .hpoint = 0};
     ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel_blue));
 
@@ -222,7 +228,7 @@ void evaluate_conditions()
 {
     soil_m_bad = soil_moisture_value < 15 ? 1 : soil_moisture_value > 80 ? 2
                                                                          : 0;
-    soil_t_bad = soil_temperature_value < 12 ? 1 : soil_temperature_value > 20 ? 2
+    soil_t_bad = soil_temperature_value < 12 ? 1 : soil_temperature_value > 30 ? 2
                                                                                : 0;
     air_h_bad = air_humidity_value < 10 ? 1 : air_humidity_value > 35 ? 2
                                                                       : 0;
@@ -250,18 +256,27 @@ void evaluate_conditions()
 
 void thresholder()
 {
-    if (soil_m_bad || soil_t_bad || air_h_bad || air_t_bad)
+    if (light_value < 4)
+    {
+        soil_m_bad = 0;
+        soil_t_bad = 0;
+        air_h_bad = 0;
+        air_t_bad = 0;
+        rgb(1);
+        gpio_set_level(RED_LED_GPIO, 0);
+    }
+    else if (soil_m_bad || soil_t_bad || air_h_bad || air_t_bad)
     {
         printf("\nLight: %s, Soil M : %s, Soil T: %s, Air T: %s, Air H: %s\n", light_quality, soil_moisture_quality, soil_temperature_quality, air_temperature_quality, air_humidity_quality);
         gpio_set_level(RED_LED_GPIO, 1);
-        rgb(soil_m_bad, soil_t_bad, air_h_bad, air_t_bad, 0);
+        rgb(0);
         buzzer();
     }
     else
     {
         printf("\nLight: %s, Soil M : %s, Soil T: %s, Air T: %s, Air H: %s\n", light_quality, soil_moisture_quality, soil_temperature_quality, air_temperature_quality, air_humidity_quality);
         gpio_set_level(RED_LED_GPIO, 0);
-        rgb(0, 0, 0, 0, 1);
+        rgb(0);
     }
 }
 
