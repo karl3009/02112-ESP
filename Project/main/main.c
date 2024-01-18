@@ -2,7 +2,6 @@
 #include "buzzer.h"
 #include <displayhappines.c>
 
-
 void display_menu(SSD1306_t *dev, const char *message)
 {
     ESP_LOGI(tag, "Displaying menu on OLED.");
@@ -111,16 +110,16 @@ void rgb(int soil_m_bad, int soil_t_bad, int air_h_bad, int air_t_bad, int good_
     {
         blue_duty = scale * 255;
     }
-    if (air_h_bad == 1) 
+    if (air_h_bad == 1)
     {
-        blue_duty = scale * 255/2;
-        red_duty = scale * 255/2;
+        blue_duty = scale * 255 / 2;
+        red_duty = scale * 255 / 2;
     }
     if (air_t_bad == 1)
     {
-        blue_duty = scale * 255/3;
-        red_duty = scale * 255/3;
-        green_duty = scale * 255/3;
+        blue_duty = scale * 255 / 3;
+        red_duty = scale * 255 / 3;
+        green_duty = scale * 255 / 3;
     }
     if (soil_t_bad == 1)
     {
@@ -215,25 +214,19 @@ void receive_data()
 
 void evaluate_conditions()
 {
-    soil_m_bad = soil_moisture_value < 50 ? 1 : soil_moisture_value > 350 ? 2
-                                                                          : 0;
+    soil_m_bad = soil_moisture_value < 15 ? 1 : soil_moisture_value > 80 ? 2
+                                                                         : 0;
     soil_t_bad = soil_temperature_value < 12 ? 1 : soil_temperature_value > 30 ? 2
                                                                                : 0;
     air_h_bad = air_humidity_value < 10 ? 1 : air_humidity_value > 35 ? 2
                                                                       : 0;
     air_t_bad = air_temperature_value < 10 ? 1 : air_temperature_value > 35 ? 2
                                                                             : 0;
-    soil_temperature_happiness = soil_temperature_value <= 18 ? (soil_temperature_value / 18) * 100 : 100 - (((soil_temperature_value / 18)) * 100 - 100);
-
-    soil_moisture_happiness = soil_moisture_value <= 150 ? (soil_moisture_value / 150) * 100 : 100 - (((soil_moisture_value / 150)) * 100 - 100);
-
-    air_temperature_happiness = air_temperature_value <= 18 ? (air_temperature_value / 18) * 100 : 100 - (((air_temperature_value / 18)) * 100 - 100);
-
-    air_humidity_happiness = air_humidity_value <= 20 ? (air_humidity_value / 20) * 100 : 100 - (((air_humidity_value / 20)) * 100 - 100);
-
-    light_happiness = light_value <= 14 ? (light_value / 14) * 100 : 100 - (((light_value / 14)) * 100 - 100);
-
-    general_happiness = (soil_temperature_happiness + soil_moisture_happiness + air_temperature_happiness + air_humidity_happiness + light_happiness) / 5;
+    soil_temperature_happiness = soil_temperature_value > 16 && soil_temperature_value < 22 ? 1 : 0;
+    soil_moisture_happiness = soil_moisture_value > 25 && soil_moisture_value < 70 ? 1 : 0;
+    air_temperature_happiness = air_temperature_value > 16 && air_temperature_value < 22 ? 1 : 0;
+    air_humidity_happiness = air_humidity_value > 11 && air_humidity_value < 25 ? 1 : 0;
+    light_happiness = light_value > 400 / 41 && light_value < 700 / 41 ? 1 : 0;
 
     strcpy(light_quality, light_value < 100 / 41 ? "Dark" : light_value < 250 / 41 ? "Dim"
                                                         : light_value < 600 / 41   ? "Light"
