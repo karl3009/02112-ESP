@@ -108,38 +108,29 @@ void rgb(int light)
     int green_duty = 0;
     int blue_duty = 0;
     int scale = 8100 / 255;
-gpio_set_level(LEDC_OUTPUT_IO_BLUE, 0);
-gpio_set_level(LEDC_OUTPUT_IO_GREEN, 0);
-gpio_set_level(LEDC_OUTPUT_IO_RED, 0);
-    if (light == 1)
-    {
-
-    }
-    else if (soil_m_bad == 1 || soil_m_bad == 2) //Blue colour
+   if (soil_m_bad == 1 || soil_m_bad == 2) //Blue colour
     {
         blue_duty = scale * 255;
     }
-    else if (air_h_bad == 1 || air_h_bad == 2) //White colour
+    else if (air_h_bad == 1 || air_h_bad == 2) //Red colour from bellow
     {
         blue_duty = scale * 255 / 2;
-        red_duty = scale * 255 / 2;
+        red_duty = scale * 255 ;
     }
-    else if (air_t_bad == 1 || air_t_bad == 2) //Purple colour
+    else if (air_t_bad == 1 || air_t_bad == 2) //Purple colour from above
     {
-        blue_duty = scale * 255;
         red_duty = scale * 255;
-        green_duty = scale * 255;
     }
     else if (soil_t_bad == 1 || soil_t_bad == 2) //Red colour
     {
         red_duty = scale * 255;
+    }  else if (light == 1)
+    {
+
     }
+    
     else
     {
-        green_duty = scale * 255 / 4;
-        vTaskDelay(150);
-        green_duty = scale * 255 / 2;
-        vTaskDelay(150);
         green_duty = scale * 255;
     }
 
@@ -235,7 +226,7 @@ void evaluate_conditions()
                                                                                : 0;
     air_h_bad = air_humidity_value < 10 ? 1 : air_humidity_value > 35 ? 2
                                                                       : 0;
-    air_t_bad = air_temperature_value < 10 ? 1 : air_temperature_value > 35 ? 2
+    air_t_bad = air_temperature_value < 12 ? 1 : air_temperature_value > 30 ? 2
                                                                             : 0;
     soil_temperature_happiness = soil_temperature_value > 16 && soil_temperature_value < 22 ? 1 : 0;
     soil_moisture_happiness = soil_moisture_value > 25 && soil_moisture_value < 70 ? 1 : 0;
@@ -480,12 +471,10 @@ void button(gpio_num_t GPIO)
 void display_happines(SSD1306_t *dev)
 {
     evaluate_conditions();
-    char Happiness[64];
-    sprintf(Happiness, "Happiness: %1.f%%", general_happiness);
-    pad_string(Happiness, 63);
-    ssd1306_display_text(dev, 2, Happiness, strlen(Happiness), false);
+
     if (general_happiness == 0)
     {
+        ssd1306_clear_screen(dev, false);
         ssd1306_bitmaps(dev, 32, 0, Sad_face(), 64, 64, true);
     }
     else if (general_happiness == 1)
@@ -587,7 +576,7 @@ void app_main(void)
                 append_to_file(sensor_data());
             }
             vTaskDelay(50);
-            switchState == 0 ? display_values(&dev) : (switchState == 1 ? display_condition(&dev) : printf("waiting\n"));
+            switchState == 0 ? display_values(&dev) : (switchState == 1 ? display_condition(&dev) :(switchState == 5 ? display_happines(&dev) : printf("waiting\n")));
         }
     }
 }
