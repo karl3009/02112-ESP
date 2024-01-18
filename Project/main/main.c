@@ -127,6 +127,12 @@ void rgb(int soil_m_bad, int soil_t_bad, int air_h_bad, int air_t_bad, int good_
     }
     if (good_condition == 1)
     {
+        green_duty = scale * 255/8;
+        vTaskDelay(150);
+        green_duty = scale * 255/4;
+        vTaskDelay(150);
+        green_duty = scale * 255/2;
+        vTaskDelay(150);
         green_duty = scale * 255;
     }
 
