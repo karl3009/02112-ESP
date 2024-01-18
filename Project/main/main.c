@@ -115,29 +115,27 @@ gpio_set_level(LEDC_OUTPUT_IO_RED, 0);
     {
 
     }
-    else if (soil_m_bad == 1 || soil_m_bad == 2)
+    else if (soil_m_bad == 1 || soil_m_bad == 2) //Blue colour
     {
         blue_duty = scale * 255;
     }
-    else if (air_h_bad == 1 || air_h_bad == 2)
+    else if (air_h_bad == 1 || air_h_bad == 2) //White colour
     {
-        blue_duty = scale * 125;
-        red_duty = scale * 130;
+        blue_duty = scale * 255 / 2;
+        red_duty = scale * 255 / 2;
     }
-    else if (air_t_bad == 1 || air_t_bad == 2)
+    else if (air_t_bad == 1 || air_t_bad == 2) //Purple colour
     {
         blue_duty = scale * 255;
         red_duty = scale * 255;
         green_duty = scale * 255;
     }
-    else if (soil_t_bad == 1 || soil_t_bad == 2)
+    else if (soil_t_bad == 1 || soil_t_bad == 2) //Red colour
     {
         red_duty = scale * 255;
     }
     else
     {
-        green_duty = scale * 255 / 8;
-        vTaskDelay(150);
         green_duty = scale * 255 / 4;
         vTaskDelay(150);
         green_duty = scale * 255 / 2;
