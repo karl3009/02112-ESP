@@ -486,6 +486,18 @@ void display_happines(SSD1306_t *dev)
     sprintf(Happiness, "Happiness: %1.f%%", general_happiness);
     pad_string(Happiness, 63);
     ssd1306_display_text(dev, 2, Happiness, strlen(Happiness), false);
+    if (general_happiness == 0)
+    {
+        ssd1306_bitmaps(dev, 32, 0, Sad_face(), 64, 64, true);
+    }
+    else if (general_happiness == 1)
+    {
+        ssd1306_bitmaps(dev, 32, 0, Med_face(), 64, 64, true);
+    }
+    else
+    {
+        ssd1306_bitmaps(dev, 32, 0, Hap_face(), 64, 64, true);
+    }
 }
 
 void app_main(void)
@@ -495,9 +507,7 @@ void app_main(void)
     init_i2c();
     initfileread();
     initDisplay(&dev);
-    ssd1306_bitmaps(&dev, 0, 0, happyFace(), 128, 64, false);
 
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
     init_red_led();
 
 
@@ -583,4 +593,3 @@ void app_main(void)
         }
     }
 }
-c:\Users\dingv\OneDrive\Uni\1.Semester\02112\DEMO\sample_project\main\bitmaps.h c:\Users\dingv\OneDrive\Uni\1.Semester\02112\DEMO\sample_project\main\bitmaps.c
