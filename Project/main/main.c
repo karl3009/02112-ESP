@@ -105,12 +105,12 @@ void rgb(int light)
     int green_duty = 0;
     int blue_duty = 0;
     int scale = 8100 / 255;
-
+gpio_set_level(LEDC_OUTPUT_IO_BLUE, 0);
+gpio_set_level(LEDC_OUTPUT_IO_GREEN, 0);
+gpio_set_level(LEDC_OUTPUT_IO_RED, 0);
     if (light == 1)
     {
-        red_duty = 0;
-        green_duty = 0;
-        blue_duty = 0;
+
     }
     else if (soil_m_bad == 1 || soil_m_bad == 2)
     {
