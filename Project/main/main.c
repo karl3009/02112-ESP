@@ -1,6 +1,6 @@
 #include "main.h"
 #include "buzzer.h"
-#include <displayhappines.c>
+//#include <displayhappines.c>
 
 void display_menu(SSD1306_t *dev, const char *message)
 {
@@ -222,7 +222,7 @@ void evaluate_conditions()
 {
     soil_m_bad = soil_moisture_value < 15 ? 1 : soil_moisture_value > 80 ? 2
                                                                          : 0;
-    soil_t_bad = soil_temperature_value < 12 ? 1 : soil_temperature_value > 30 ? 2
+    soil_t_bad = soil_temperature_value < 12 ? 1 : soil_temperature_value > 20 ? 2
                                                                                : 0;
     air_h_bad = air_humidity_value < 10 ? 1 : air_humidity_value > 35 ? 2
                                                                       : 0;
