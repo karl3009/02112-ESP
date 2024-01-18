@@ -252,6 +252,18 @@ void evaluate_conditions()
                                                                          : "Good");
     strcpy(air_temperature_quality, air_t_bad == 1 ? "Cold" : air_t_bad == 2 ? "Hot"
                                                                              : "Good");
+    if (soil_m_bad || soil_t_bad || air_h_bad || air_t_bad)
+    {
+        general_happiness = 0;
+    }
+    else if (soil_moisture_happiness && soil_temperature_happiness && air_temperature_happiness && air_humidity_happiness && light_happiness)
+    {
+        general_happiness = 2;
+    }
+    else
+    {
+        general_happiness = 1;
+    }
 }
 
 void thresholder()
