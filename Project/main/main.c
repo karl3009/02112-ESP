@@ -64,7 +64,6 @@ void soil_sensor(int *soil_moisture_value, float *soil_temperature_value)
         ESP_LOGI(tag, "Temperature value: \t%.1f", temperature_value);
     }
 
-    // 500 ms delay
     vTaskDelay((500) / portTICK_PERIOD_MS);
     *soil_moisture_value = (moisture_value - 650) * 100 / 450;
     *soil_temperature_value = temperature_value;
@@ -112,12 +111,12 @@ void rgb(int light)
     {
         blue_duty = scale * 255;
     }
-    else if (air_h_bad == 1 || air_h_bad == 2) //Red colour from bellow
+    else if (air_h_bad == 1 || air_h_bad == 2) //Purple colour 
     {
         blue_duty = scale * 255 / 2;
         red_duty = scale * 255 ;
     }
-    else if (air_t_bad == 1 || air_t_bad == 2) //Purple colour from above
+    else if (air_t_bad == 1 || air_t_bad == 2) //Red colour
     {
         red_duty = scale * 255;
     }
@@ -337,6 +336,7 @@ void display_condition(SSD1306_t *dev)
     char soil_tempereature_condition[64];
     sprintf(soil_moisture_condition, "Gnd Mst: %s", soil_moisture_quality);
     sprintf(soil_tempereature_condition, "Gnd Tmp: %s", soil_temperature_quality);
+    
     // Ensure each string fills the entire line
     pad_string(soil_moisture_condition, 63);
     pad_string(soil_tempereature_condition, 63);
@@ -435,7 +435,7 @@ int read_to_file()
     }
 
     fclose(fp);
-    return 0; // Indicate success
+    return 0;
 }
 
 char *sensor_data()
@@ -475,15 +475,15 @@ void display_happines(SSD1306_t *dev)
     if (general_happiness == 0)
     {
         ssd1306_clear_screen(dev, false);
-        ssd1306_bitmaps(dev, 32, 0, Sad_face(), 64, 64, true);
+        ssd1306_bitmaps(dev, 0, 0, Sad_face(), 128, 64, true);
     }
     else if (general_happiness == 1)
     {
-        ssd1306_bitmaps(dev, 32, 0, Med_face(), 64, 64, true);
+        ssd1306_bitmaps(dev, 0, 0, Med_face(), 128, 64, true);
     }
     else
     {
-        ssd1306_bitmaps(dev, 32, 0, Hap_face(), 64, 64, true);
+        ssd1306_bitmaps(dev, 0, 0, Hap_face(), 128, 64, true);
     }
 }
 
@@ -509,13 +509,11 @@ void app_main(void)
     esp_err_t esp_timer_init();
     baseTime = esp_timer_get_time();
 
-    // Go to main loop
-    // button_switch(&dev);
-
     int switchState = 0;
     const char *programRunning[] = {"Display values", "Display condi.", "Start Logging", "Stop Logging", "Data output", "Happiness"}; // Array of strings
     const char currentProgram[32];
 
+    //display first menu
     sprintf(currentProgram, "%d. %s", switchState + 1, programRunning[switchState]);
     display_menu(&dev, currentProgram);
     printf("Program : %s \t|", currentProgram);
@@ -541,13 +539,12 @@ void app_main(void)
             switch (switchState)
             {
             case 0:
-                display_values(&dev);
+                display_values(&dev); 
                 break;
             case 1:
                 display_condition(&dev);
                 break;
             case 2:
-                // Start data logging for a specified duration
                 printf("Start data\n");
                 write_to_file(); // Implement this function to write the header to the file
                 display_menu(&dev, currentProgram);
